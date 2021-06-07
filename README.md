@@ -4,7 +4,7 @@ Machine learning playground using OpenAI Gym and PyBullet for robotic grasping.
 ## Policy Based Methods
 ### Deep Q Learning (DQN)
 ### Proximal Policy Optimization (PPO)
-### Interactive RL
+### Interactive RL (IRL)
 
 ### Model update using PPO/GAE
 The hyperparameters used during training are:
