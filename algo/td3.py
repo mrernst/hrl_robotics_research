@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # _____________________________________________________________________________
 
-# Author implementation
+# Modified Author implementation
 # Twin Delayed Deep Deterministic Policy Gradients (TD3)
 # Paper: https://arxiv.org/abs/1802.09477
 
@@ -16,9 +16,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+# helper functions
+# -----
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
+# net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
+# net.apply(init_weights)
+
+# custom classes
+# -----
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
@@ -81,7 +92,8 @@ class TD3(object):
             tau=0.005,
             policy_noise=0.2,
             noise_clip=0.5,
-            policy_freq=2
+            policy_freq=2,
+            name='default'
     ):
 
         self.actor = Actor(state_dim, action_dim, max_action).to(device)
@@ -100,7 +112,8 @@ class TD3(object):
         self.policy_noise = policy_noise
         self.noise_clip = noise_clip
         self.policy_freq = policy_freq
-
+        self.name = name
+        
         self.total_it = 0
 
     def select_action(self, state):
@@ -140,7 +153,23 @@ class TD3(object):
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
-
+        
+        # Log losses / gradients
+        with torch.no_grad():
+            if tensorboard_writer:
+                tensorboard_writer.add_scalar(
+                    f'{self.name}/critic_loss', critic_loss.detach().numpy(), self.total_it)
+                # mean weights critic histogram
+                tensorboard_writer.add_histogram(f'{self.name}/critic_weights',(torch.cat([p.flatten() for p in self.critic.parameters()])).detach().numpy(), self.total_it)
+                # gradient norm and std
+                norm_type = 2
+                cr_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.critic.parameters()]), norm_type)
+                tensorboard_writer.add_scalar(
+                f'{self.name}/critic_gradient_norm', cr_gr_norm, self.total_it)
+                cr_gr_std = torch.std(torch.cat([p.grad.detach().flatten() for p in self.critic.parameters()]))
+                tensorboard_writer.add_scalar(
+                f'{self.name}/critic_gradient_std', cr_gr_std, self.total_it)
+        
         # Delayed policy updates
         if self.total_it % self.policy_freq == 0:
 
@@ -151,6 +180,22 @@ class TD3(object):
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
             self.actor_optimizer.step()
+            
+            # Log losses / gradients
+            with torch.no_grad():
+                if tensorboard_writer:
+                    tensorboard_writer.add_scalar(
+                        f'{self.name}/actor_loss', actor_loss.detach().numpy(), self.total_it)
+                    # mean weights actor histogram
+                    tensorboard_writer.add_histogram(f'{self.name}/actor_weights',(torch.cat([p.flatten() for p in self.actor.parameters()])).detach().numpy(), self.total_it)
+                    # gradient norm and std
+                    norm_type = 2
+                    ac_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.actor.parameters()]), norm_type)
+                    tensorboard_writer.add_scalar(
+                    f'{self.name}/actor_gradient_norm', ac_gr_norm, self.total_it)
+                    ac_gr_std = torch.std(torch.cat([p.grad.detach().flatten() for p in self.actor.parameters()]))
+                    tensorboard_writer.add_scalar(
+                    f'{self.name}/actor_gradient_std', ac_gr_std, self.total_it)
 
             # Update the frozen target models
             for param, target_param in zip(self.critic.parameters(),
