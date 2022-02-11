@@ -29,7 +29,7 @@ from agent.agent import Agent
 
 def experiment(
     policy_name="TD3",
-    env_name="InvertedPendulum-v2",
+    env_name="Reacher-v2",
     start_timesteps=25e3,
     eval_freq=5e3,
     max_timesteps=1e6,
@@ -40,8 +40,11 @@ def experiment(
     policy_noise=0.2,
     noise_clip=0.5,
     policy_freq=2,
+    actor_lr=0.0003,
+    critic_lr=0.0003,
     save_model=False,
     load_model="",
+    verbose=False,
     seed=0,  # This argument is mandatory
     results_dir='./save'  # This argument is mandatory
 ):
@@ -54,9 +57,9 @@ def experiment(
     if save_model:
         os.makedirs(os.path.join(results_dir, '/models'), exist_ok=True)
 
-    logger = MetricLogger(results_dir)
-
+    
     file_name = f"{policy_name}_{env_name}_{seed}"
+
     print("---------------------------------------")
     print(f"Policy: {policy_name}, Env: {env_name}, Seed: {seed}")
     print("---------------------------------------")
@@ -88,7 +91,7 @@ def experiment(
         kwargs["policy_noise"] = policy_noise * max_action
         kwargs["noise_clip"] = noise_clip * max_action
         kwargs["policy_freq"] = policy_freq
-        policy = TD3.TD3(**kwargs)
+        policy = TD3.TD3(**kwargs, name='flat')
     else:
         raise NotImplementedError()
 
@@ -115,11 +118,11 @@ def experiment(
 
     # start logging of parameters
     # initialize logger
-    # logger = utils.logger.TBMetricLogger()
+    logger = MetricLogger(results_dir)
+    
     episode_reward = 0
     episode_timesteps = 0
     episode_num = 0
-    success = 0
 
     # training loop
     for t in range(int(max_timesteps)):
@@ -154,22 +157,20 @@ def experiment(
 
         # 8. Logging
         logger.log_step(reward, None, None)
+        
         # 7. Learn
         # Train agent after collecting sufficient data
         if t >= start_timesteps:
-            agent.learn(batch_size, logger.writer)
+            agent.learn(batch_size)
 
         if done:
-            if episode_timesteps < env._max_episode_steps:
-                success += 1
-                logger.writer.add_scalar(
-                    'agent/cumulative_success', success, t)
             # +1 to account for 0 indexing. +0 on ep_timesteps
             # since it will increment +1 even if done=True
-            print(" " * 80 + "\r" +
-                  f"Total T: {t+1} Episode Num: {episode_num+1} \
-                Episode T: {episode_timesteps} Reward: {episode_reward:.3f}",
-                  end="\r")
+            if verbose:
+                print(" " * 80 + "\r" +
+                      f"Total T: {t+1} Episode Num: {episode_num+1} \
+                    Episode T: {episode_timesteps} Reward: {episode_reward:.3f}",
+                      end="\r")
 
             # Reset environment
             state, done = env.reset(), False
@@ -179,15 +180,26 @@ def experiment(
             episode_num += 1
 
             # 10. Episode based metrics
-            # Evaluate episode
-            logger.log_episode(t)
-
+            logger.log_episode()
+        
+        # Evaluate episode
         if (t + 1) % eval_freq == 0:
-            agent.eval_policy(env_name, seed)
-            # log evaluation results with non-noisy action selection
+            eval_episodes = 10
+            avg_reward = agent.eval_policy(env_name, seed, eval_episodes)
+            if verbose:
+                print(" " * 80 + "\r" + "---------------------------------------")
+                print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}")
+                print("---------------------------------------")
+            
+            # log results
+            logger.write_to_tensorboard(t)
             logger.writer.add_scalar(
-                'agent/eval_episode_reward', agent.evaluations[-1], t)
-            agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
+                'training/eval_reward', agent.evaluations[-1], t)
+            for k in agent.policy.curr_train_metrics.keys():
+                logger.writer.add_scalar(f"agent/{k}", agent.policy.curr_train_metrics[k], t)
+            
+            
+            # agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
             if save_model:
                 policy.save(f".{results_dir}/models/{file_name}")
 
@@ -211,7 +223,8 @@ def parse_args():
     arg_conf.add_argument("--expl_noise")
     # Batch size for both actor and critic
     arg_conf.add_argument("--batch_size", type=int)
-    arg_conf.add_argument("--discount")                 # Discount factor
+    # Discount factor
+    arg_conf.add_argument("--discount")
     # Target network update rate
     arg_conf.add_argument("--tau")
     # Noise added to target policy during critic update
@@ -224,7 +237,13 @@ def parse_args():
     arg_conf.add_argument("--save_model", action="store_true")
     # Model load file name, "" doesn't load, "default" uses file_name
     arg_conf.add_argument("--load_model", default="")
-
+    # Learning rate of the actor
+    arg_conf.add_argument("--actor_lr")
+    # Learning rate of the critic
+    arg_conf.add_argument("--critic_lr")
+    # Print information to CLI
+    arg_conf.add_argument("--verbose", action="store_true")
+    
     # Leave unchanged
     parser = add_launcher_base_args(parser)
     parser.set_defaults(**get_default_params(experiment))
