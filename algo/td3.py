@@ -16,9 +16,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # helper functions
 # -----
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from util.utils import log_tensor_stats
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -30,6 +32,7 @@ def init_weights(m):
 
 # custom classes
 # -----
+
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
@@ -93,18 +96,20 @@ class TD3(object):
             policy_noise=0.2,
             noise_clip=0.5,
             policy_freq=2,
-            name='default'
+            name='default',
+            actor_lr = 0.0003,
+            critic_lr = 0.0003,
     ):
 
         self.actor = Actor(state_dim, action_dim, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=3e-4)
+            self.actor.parameters(), lr=actor_lr)
 
         self.critic = Critic(state_dim, action_dim).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=3e-4)
+            self.critic.parameters(), lr=critic_lr)
 
         self.max_action = max_action
         self.discount = discount
@@ -114,13 +119,15 @@ class TD3(object):
         self.policy_freq = policy_freq
         self.name = name
         
+        self.curr_train_metrics = {}
+
         self.total_it = 0
 
     def select_action(self, state):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, batch_size=256, tensorboard_writer=None):
+    def train(self, replay_buffer, batch_size=256):        
         self.total_it += 1
 
         # Sample replay buffer
@@ -148,30 +155,23 @@ class TD3(object):
         # Compute critic loss
         critic_loss = F.mse_loss(current_Q1, target_Q) + \
             F.mse_loss(current_Q2, target_Q)
-
+        
         # Optimize the critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
         
-        # Log losses / gradients
+        # Collect metrics
         with torch.no_grad():
-            if tensorboard_writer:
-                tensorboard_writer.add_scalar(
-                    f'{self.name}/critic_loss', critic_loss.detach().numpy(), self.total_it)
-                # mean weights critic histogram
-                tensorboard_writer.add_histogram(f'{self.name}/critic_weights',(torch.cat([p.flatten() for p in self.critic.parameters()])).detach().numpy(), self.total_it)
-                # gradient norm and std
-                norm_type = 2
-                cr_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.critic.parameters()]), norm_type)
-                tensorboard_writer.add_scalar(
-                f'{self.name}/critic_gradient_norm', cr_gr_norm, self.total_it)
-                cr_gr_std = torch.std(torch.cat([p.grad.detach().flatten() for p in self.critic.parameters()]))
-                tensorboard_writer.add_scalar(
-                f'{self.name}/critic_gradient_std', cr_gr_std, self.total_it)
+            norm_type = 2
+            cr_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.critic.parameters()]), norm_type)
+            self.curr_train_metrics['critic/gradients/norm'] = cr_gr_norm
+            self.curr_train_metrics['critic/loss'] = critic_loss
         
+        #         # tensorboard_writer.add_histogram(f'{self.name}/value/critic_weights',(torch.cat([p.flatten() for p in self.critic.parameters()])).detach().numpy(), self.total_it)
+          
         # Delayed policy updates
-        if self.total_it % self.policy_freq == 0:
+        if (self.total_it % self.policy_freq == 0):
 
             # Compute actor loss
             actor_loss = -self.critic.Q1(state, self.actor(state)).mean()
@@ -181,22 +181,14 @@ class TD3(object):
             actor_loss.backward()
             self.actor_optimizer.step()
             
-            # Log losses / gradients
+            
+            # Collect metrics
             with torch.no_grad():
-                if tensorboard_writer:
-                    tensorboard_writer.add_scalar(
-                        f'{self.name}/actor_loss', actor_loss.detach().numpy(), self.total_it)
-                    # mean weights actor histogram
-                    tensorboard_writer.add_histogram(f'{self.name}/actor_weights',(torch.cat([p.flatten() for p in self.actor.parameters()])).detach().numpy(), self.total_it)
-                    # gradient norm and std
-                    norm_type = 2
-                    ac_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.actor.parameters()]), norm_type)
-                    tensorboard_writer.add_scalar(
-                    f'{self.name}/actor_gradient_norm', ac_gr_norm, self.total_it)
-                    ac_gr_std = torch.std(torch.cat([p.grad.detach().flatten() for p in self.actor.parameters()]))
-                    tensorboard_writer.add_scalar(
-                    f'{self.name}/actor_gradient_std', ac_gr_std, self.total_it)
-
+                norm_type = 2
+                ac_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.actor.parameters()]), norm_type)
+                self.curr_train_metrics['actor/gradients/norm'] = ac_gr_norm
+                self.curr_train_metrics['actor/loss'] = actor_loss
+            
             # Update the frozen target models
             for param, target_param in zip(self.critic.parameters(),
                                            self.critic_target.parameters()):
