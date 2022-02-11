@@ -353,7 +353,7 @@ def run_experiment(func, args):
 def add_launcher_base_args(parser):
     arg_default = parser.add_argument_group('Default')
     arg_default.add_argument('--seed', type=int)
-    arg_default.add_argument('--results-dir', type=str)
+    arg_default.add_argument('--results_dir', type=str)
     arg_default.add_argument('--joblib-n-jobs', type=int)
     arg_default.add_argument('--joblib-n-seeds', type=int)
     return parser

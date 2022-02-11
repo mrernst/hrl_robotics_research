@@ -187,8 +187,8 @@ def experiment(
                 'training/eval_reward', agent.evaluations[-1], t)
             for k in agent.policy.curr_train_metrics.keys():
                 logger.writer.add_scalar(f"agent/{k}", agent.policy.curr_train_metrics[k], t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.actor.parameters()]).detach(), "agent/actor/weights", logger.writer)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters()]).detach(), "agent/critic/weights", logger.writer)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.actor.parameters()]).detach(), "agent/actor/weights", logger.writer, t)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters()]).detach(), "agent/critic/weights", logger.writer, t)
             
             
             # agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
@@ -238,7 +238,7 @@ def parse_args():
     # Directory to save files
     arg_conf.add_argument("--results_dir", type=str)
     # Seed
-    arg_conf.add_argument("--seed", type=int)
+    arg_conf.add_argument("--seed")
     # Leave unchanged
     parser = add_launcher_base_args(parser)
     parser.set_defaults(**get_default_params(experiment))
