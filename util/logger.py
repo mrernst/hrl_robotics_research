@@ -39,7 +39,7 @@ class MetricLogger():
 
         # write down reward at each step
 
-    def log_episode(self, t):
+    def log_episode(self):
         "Mark end of episode"
         self.ep_rewards.append(self.curr_ep_reward)
         self.ep_lengths.append(self.curr_ep_length)
@@ -50,14 +50,7 @@ class MetricLogger():
             ep_avg_loss = np.round(self.curr_ep_loss /
                                    self.curr_ep_loss_length, 5)
             ep_avg_q = np.round(self.curr_ep_q / self.curr_ep_loss_length, 5)
-
-        self.writer.add_scalar(
-            'agent/training_episode_reward', self.curr_ep_reward, t)
-        self.writer.add_scalar(
-            'agent/training_episode_length', self.curr_ep_length, t)
-        # self.writer.add_scalar('agent/avg_loss', ep_avg_loss, self.episode_number)
-        # self.writer.add_scalar('agent/avg_Q', ep_avg_q, self.episode_number)
-
+        
         self.ep_avg_losses.append(ep_avg_loss)
         self.ep_avg_qs.append(ep_avg_q)
         self.episode_number += 1
@@ -69,3 +62,13 @@ class MetricLogger():
         self.curr_ep_loss = 0.0
         self.curr_ep_q = 0.0
         self.curr_ep_loss_length = 0
+    
+    def write_to_tensorboard(self, global_step):
+        # extra function or even class to write stats down
+        self.writer.add_scalar(
+            'training/reward', self.ep_rewards[-1], global_step)
+        self.writer.add_scalar(
+            'training/episode_length', self.ep_lengths[-1], global_step)
+        # self.writer.add_scalar('agent/avg_loss', ep_avg_loss, global_step)
+        # self.writer.add_scalar('agent/avg_Q', ep_avg_q, global_step)
+        
