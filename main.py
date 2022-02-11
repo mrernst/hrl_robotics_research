@@ -233,9 +233,9 @@ def parse_args():
     # Model load file name, "" doesn't load, "default" uses file_name
     arg_conf.add_argument("--load_model", default="")
     # Learning rate of the actor
-    arg_conf.add_argument("--actor_lr")
+    arg_conf.add_argument("--actor_lr", type=float)
     # Learning rate of the critic
-    arg_conf.add_argument("--critic_lr")
+    arg_conf.add_argument("--critic_lr", type=float)
     # Print information to CLI
     arg_conf.add_argument("--verbose", action="store_true")
     parser = add_launcher_base_args(parser)
