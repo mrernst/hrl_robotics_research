@@ -94,9 +94,9 @@ class TD3(object):
             policy_noise=0.2,
             noise_clip=0.5,
             policy_freq=2,
-            name='default',
             actor_lr = 0.0003,
             critic_lr = 0.0003,
+            name='default',
     ):
 
         self.actor = Actor(state_dim, action_dim, max_action).to(device)

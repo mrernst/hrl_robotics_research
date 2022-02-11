@@ -91,6 +91,9 @@ def experiment(
         kwargs["policy_noise"] = policy_noise * max_action
         kwargs["noise_clip"] = noise_clip * max_action
         kwargs["policy_freq"] = policy_freq
+        kwargs["actor_lr"] = actor_lr
+        kwargs["critic_lr"] = critic_lr
+        
         policy = TD3.TD3(**kwargs, name='flat')
     else:
         raise NotImplementedError()
