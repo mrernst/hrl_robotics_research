@@ -16,9 +16,9 @@ from util.launcher import Launcher
 # ----------------
 
 if __name__ == '__main__':
-    LOCAL = True
+    LOCAL = False
     TEST = False
-    USE_CUDA = False
+    USE_CUDA = True
 
     JOBLIB_PARALLEL_JOBS = 4  # or os.cpu_count() to use all cores
     N_SEEDS = 1
@@ -37,9 +37,9 @@ if __name__ == '__main__':
                         seconds=0,
                         partition='sleuths',
                         # conda_env='base',
-                        gres='gpu:rtx2080:1' if USE_CUDA else None,
+                        gres='gpu:rtx2070super:1' if USE_CUDA else None,
                         use_timestamp=True,
-                        use_underscore_argparse=False
+                        use_underscore_argparse=True
                         )
 
     actor_learning_rates = [0.0003, 0.003, 0.03]

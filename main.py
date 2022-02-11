@@ -235,7 +235,10 @@ def parse_args():
     arg_conf.add_argument("--critic_lr")
     # Print information to CLI
     arg_conf.add_argument("--verbose", action="store_true")
-    
+    # Directory to save files
+    arg_conf.add_argument("--results_dir", type=str)
+    # Seed
+    arg_conf.add_argument("--seed", type=int)
     # Leave unchanged
     parser = add_launcher_base_args(parser)
     parser.set_defaults(**get_default_params(experiment))
