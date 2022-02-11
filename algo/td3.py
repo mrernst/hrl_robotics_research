@@ -20,8 +20,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # helper functions
 # -----
-from util.utils import log_tensor_stats
-
 def init_weights(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform(m.weight)

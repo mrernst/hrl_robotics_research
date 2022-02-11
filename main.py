@@ -20,7 +20,7 @@ from util.launcher import get_default_params, run_experiment, \
     add_launcher_base_args, save_args
 from util.replay_buffer import ReplayBuffer
 import algo.td3 as TD3
-from util.logger import MetricLogger
+from util.logger import MetricLogger, log_tensor_stats
 
 from agent.agent import Agent
 # custom functions
@@ -120,14 +120,8 @@ def experiment(
     # initialize logger
     logger = MetricLogger(results_dir)
     
-    episode_reward = 0
-    episode_timesteps = 0
-    episode_num = 0
-
     # training loop
     for t in range(int(max_timesteps)):
-
-        episode_timesteps += 1
 
         # 3. Render environment [WIP]
         # env.render()
@@ -145,7 +139,7 @@ def experiment(
         # next_state = np.concatenate([next_state[k] for k in next_state.keys()])
 
         done_bool = float(
-            done) if episode_timesteps < env._max_episode_steps else 0
+            done) if logger.curr_ep_steps < env._max_episode_steps else 0
 
         # 6. Remember
         # Store data in replay buffer
@@ -153,9 +147,8 @@ def experiment(
 
         # 9. Update state
         state = next_state
-        episode_reward += reward
-
-        # 8. Logging
+        
+        # 8. Logging / updating metrics
         logger.log_step(reward, None, None)
         
         # 7. Learn
@@ -168,18 +161,15 @@ def experiment(
             # since it will increment +1 even if done=True
             if verbose:
                 print(" " * 80 + "\r" +
-                      f"Total T: {t+1} Episode Num: {episode_num+1} \
-                    Episode T: {episode_timesteps} Reward: {episode_reward:.3f}",
+                      f"Total T: {t+1} Episode Num: {logger.episode_number+1} \
+                    Episode T: {logger.curr_ep_steps} Reward: {logger.curr_ep_reward:.3f}",
                       end="\r")
 
             # Reset environment
             state, done = env.reset(), False
             # state = np.concatenate([state[k] for k in state.keys()])
-            episode_reward = 0
-            episode_timesteps = 0
-            episode_num += 1
 
-            # 10. Episode based metrics
+            # 10. Episode based metrics, automatically resets episode timesteps
             logger.log_episode()
         
         # Evaluate episode
@@ -197,6 +187,8 @@ def experiment(
                 'training/eval_reward', agent.evaluations[-1], t)
             for k in agent.policy.curr_train_metrics.keys():
                 logger.writer.add_scalar(f"agent/{k}", agent.policy.curr_train_metrics[k], t)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.actor.parameters()]).detach(), "agent/actor/weights", logger.writer)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters()]).detach(), "agent/critic/weights", logger.writer)
             
             
             # agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
