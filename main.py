@@ -54,8 +54,6 @@ def experiment(
     os.makedirs(results_dir, exist_ok=True)
     # Save arguments
     save_args(results_dir, locals(), git_repo_path='./')
-    if save_model:
-        os.makedirs(os.path.join(results_dir, '/models'), exist_ok=True)
 
     
     file_name = f"{policy_name}_{env_name}_{seed}"
@@ -196,7 +194,7 @@ def experiment(
             
             # agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
             if save_model:
-                policy.save(f".{results_dir}/models/{file_name}")
+                policy.save(f".{results_dir}/{file_name}")
 
 
 def parse_args():
