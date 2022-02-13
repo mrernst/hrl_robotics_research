@@ -194,7 +194,7 @@ def experiment(
             
             # agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
             if save_model:
-                policy.save(f".{results_dir}/{file_name}")
+                policy.save(f"{results_dir}/{file_name}")
 
 
 def parse_args():
