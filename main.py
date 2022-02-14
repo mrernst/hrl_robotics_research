@@ -50,7 +50,6 @@ def experiment(
 ):
 
     # Create results directory
-    results_dir = os.path.join(results_dir, str(seed))
     os.makedirs(results_dir, exist_ok=True)
     # Save arguments
     save_args(results_dir, locals(), git_repo_path='./')
@@ -99,7 +98,9 @@ def experiment(
     if load_model != "":
         policy_file = file_name if load_model == "default" else load_model
         policy.load(f"{results_dir}/{policy_file}")
-
+    
+    results_dir = os.path.join(results_dir, str(seed))
+    
     # choose replay buffer
     replay_buffer = ReplayBuffer(state_dim, action_dim)
 
@@ -192,9 +193,12 @@ def experiment(
             log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters()]).detach(), "agent/critic/weights", logger.writer, t)
             
             
-            # agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
             if save_model:
                 policy.save(f"{results_dir}/{file_name}")
+    
+            # video evaluation if model is loaded
+            if load_model != "":
+                agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
 
 
 def parse_args():
