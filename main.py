@@ -98,7 +98,7 @@ def experiment(
 
     if load_model != "":
         policy_file = file_name if load_model == "default" else load_model
-        policy.load(f"./models/{policy_file}")
+        policy.load(f"{results_dir}/{policy_file}")
 
     # choose replay buffer
     replay_buffer = ReplayBuffer(state_dim, action_dim)
