@@ -4,6 +4,7 @@ Machine learning playground using OpenAI Gym and Mujoco/PyBullet for robotic tas
 
 ### Project Name LUNA
 ### Flat agent
+TD3 Algorithm
 ### Hierarchical agent
 ### Model-based RL
 
