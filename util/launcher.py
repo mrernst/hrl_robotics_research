@@ -20,7 +20,6 @@ import datetime
 from importlib import import_module
 from itertools import product
 
-
 # custom classes
 # -----
 
@@ -336,8 +335,16 @@ def run_experiment(func, args):
     initial_seed = copy(args['seed'])
     if joblib_n_jobs is not None:
         initial_seed *= joblib_n_jobs
+    try:
+      args.unlock()
+    except:
+      pass
     del args['joblib_n_jobs']
     del args['joblib_n_seeds']
+    try:
+      args.lock()
+    except:
+      pass
 
     def generate_joblib_seeds(params_dict):
         final_seed = initial_seed + 1 if joblib_n_seeds is None else joblib_n_seeds
@@ -366,8 +373,14 @@ def save_args(results_dir, args, git_repo_path=None, seed=None):
 
     filename = 'args.json' if seed is None else f'args-{seed}.json'
     # Save args
+    l = []
+    for a in args:
+      try:
+        l.append(args[a].items())
+      except:
+        l.append((a,args[a]))
     with open(os.path.join(results_dir, filename), 'w') as f:
-        json.dump(args, f, indent=2)
+        json.dump(l, f, indent=2)
 
     del args['git_hash']
     del args['git_url']

@@ -16,35 +16,23 @@ import numpy as np
 import torch
 import gym
 
+from absl import flags, app
+from ml_collections.config_flags import config_flags
+
 from util.launcher import get_default_params, run_experiment, \
     add_launcher_base_args, save_args
 from util.replay_buffer import ReplayBuffer
 import algo.td3 as TD3
 from util.logger import MetricLogger, log_tensor_stats
 
-from agent.agent import Agent
+from agent.flat import Agent
 # custom functions
 # -----
 
 
 def experiment(
-    policy_name="TD3",
-    env_name="Reacher-v2",
-    start_timesteps=25e3,
-    eval_freq=5e3,
-    max_timesteps=1e6,
-    expl_noise=0.1,
-    batch_size=256,
-    discount=0.99,
-    tau=0.005,
-    policy_noise=0.2,
-    noise_clip=0.5,
-    policy_freq=2,
-    actor_lr=0.0003,
-    critic_lr=0.0003,
-    save_model=False,
-    load_model="",
-    verbose=False,
+    main_cnf,
+    agent_cnf,
     seed=0,  # This argument is mandatory
     results_dir='./save'  # This argument is mandatory
 ):
@@ -55,13 +43,13 @@ def experiment(
     save_args(results_dir, locals(), git_repo_path='./')
 
     
-    file_name = f"{policy_name}_{env_name}_{seed}"
+    file_name = f"{main_cnf.policy_name}_{main_cnf.env_name}_{seed}"
 
     print("---------------------------------------")
-    print(f"Policy: {policy_name}, Env: {env_name}, Seed: {seed}")
+    print(f"Policy: {main_cnf.policy_name}, Env: {main_cnf.env_name}, Seed: {seed}")
     print("---------------------------------------")
 
-    env = gym.make(env_name)
+    env = gym.make(main_cnf.env_name)
     # Set seeds
     env.seed(seed)
     env.action_space.seed(seed)
@@ -79,24 +67,24 @@ def experiment(
         "state_dim": state_dim,
         "action_dim": action_dim,
         "max_action": max_action,
-        "discount": discount,
-        "tau": tau,
+        "discount": agent_cnf.discount,
+        "tau": agent_cnf.tau,
     }
 
-    if policy_name == "TD3":
+    if main_cnf.policy_name == "TD3":
         # Target policy smoothing is scaled wrt the action scale
-        kwargs["policy_noise"] = policy_noise * max_action
-        kwargs["noise_clip"] = noise_clip * max_action
-        kwargs["policy_freq"] = policy_freq
-        kwargs["actor_lr"] = actor_lr
-        kwargs["critic_lr"] = critic_lr
+        kwargs["policy_noise"] = agent_cnf.policy_noise * max_action
+        kwargs["noise_clip"] = agent_cnf.noise_clip * max_action
+        kwargs["policy_freq"] = agent_cnf.policy_freq
+        kwargs["actor_lr"] = agent_cnf.actor_lr
+        kwargs["critic_lr"] = agent_cnf.critic_lr
         
         policy = TD3.TD3(**kwargs, name='flat')
     else:
         raise NotImplementedError()
 
-    if load_model != "":
-        policy_file = file_name if load_model == "default" else load_model
+    if main_cnf.load_model != "":
+        policy_file = file_name if main_cnf.load_model == "default" else main_cnf.load_model
         policy.load(f"{results_dir}/{policy_file}")
     
     results_dir = os.path.join(results_dir, str(seed))
@@ -105,11 +93,11 @@ def experiment(
     replay_buffer = ReplayBuffer(state_dim, action_dim)
 
     # Initialize Agent with policy
-    agent = Agent(action_dim, policy, replay_buffer, burnin=start_timesteps)
+    agent = Agent(action_dim, policy, replay_buffer, burnin=main_cnf.start_timesteps)
 
     # Evaluate untrained policy
-    agent.eval_policy(env_name, seed)
-    # delete: evaluations = [eval_policy(policy, env_name, seed)]
+    agent.eval_policy(main_cnf.env_name, seed)
+    # delete: evaluations = [eval_policy(policy, main_cnf.env_name, seed)]
 
     # Main training loop
     # -----
@@ -123,7 +111,7 @@ def experiment(
     logger = MetricLogger(results_dir)
     
     # training loop
-    for t in range(int(max_timesteps)):
+    for t in range(int(main_cnf.max_timesteps)):
 
         # 3. Render environment [WIP]
         # env.render()
@@ -131,10 +119,10 @@ def experiment(
         # 4. Run agent on the state (get the action)
         # Select action randomly or according to policy
 
-        if t < start_timesteps:
+        if t < main_cnf.start_timesteps:
             action = env.action_space.sample()
         else:
-            action = agent.select_action(state, max_action, expl_noise)
+            action = agent.select_action(state, max_action, agent_cnf.expl_noise)
 
         # 5. Agent performs action
         next_state, reward, done, _ = env.step(action)
@@ -155,13 +143,13 @@ def experiment(
         
         # 7. Learn
         # Train agent after collecting sufficient data
-        if t >= start_timesteps:
-            agent.learn(batch_size)
+        if t >= main_cnf.start_timesteps:
+            agent.learn(agent_cnf.batch_size)
 
         if done:
             # +1 to account for 0 indexing. +0 on ep_timesteps
             # since it will increment +1 even if done=True
-            if verbose:
+            if main_cnf.verbose:
                 print(" " * 80 + "\r" +
                       f"Total T: {t+1} Episode Num: {logger.episode_number+1} \
                     Episode T: {logger.curr_ep_steps} Reward: {logger.curr_ep_reward:.3f}",
@@ -175,10 +163,10 @@ def experiment(
             logger.log_episode()
         
         # Evaluate episode
-        if (t + 1) % eval_freq == 0:
+        if (t + 1) % main_cnf.eval_freq == 0:
             eval_episodes = 10
-            avg_reward = agent.eval_policy(env_name, seed, eval_episodes)
-            if verbose:
+            avg_reward = agent.eval_policy(main_cnf.env_name, seed, eval_episodes)
+            if main_cnf.verbose:
                 print(" " * 80 + "\r" + "---------------------------------------")
                 print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}")
                 print("---------------------------------------")
@@ -193,67 +181,29 @@ def experiment(
             log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters()]).detach(), "agent/critic/weights", logger.writer, t)
             
             
-            if save_model:
+            if main_cnf.save_model:
                 policy.save(f"{results_dir}/{file_name}")
     
             # video evaluation if model is loaded
-            if load_model != "":
-                agent.create_policy_eval_video(env_name, seed, results_dir + f"/t_{t+1}")
+            if main_cnf.load_model != "":
+                agent.create_policy_eval_video(main_cnf.env_name, seed, results_dir + f"/t_{t+1}")
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-
-    # Place your experiment arguments here
-    arg_conf = parser.add_argument_group('Config')
-    # Policy name (TD3, or else if implemented)
-    arg_conf.add_argument("--policy_name", type=str)
-    # OpenAI gym environment name
-    arg_conf.add_argument("--env_name", type=str)
-    # Time steps initial random policy is used
-    arg_conf.add_argument("--start_timesteps", type=int)
-    # How often (time steps) we evaluate
-    arg_conf.add_argument("--eval_freq", type=int)
-    # Max time steps to run environment
-    arg_conf.add_argument("--max_timesteps", type=int)
-    # Std of Gaussian exploration noise
-    arg_conf.add_argument("--expl_noise")
-    # Batch size for both actor and critic
-    arg_conf.add_argument("--batch_size", type=int)
-    # Discount factor
-    arg_conf.add_argument("--discount")
-    # Target network update rate
-    arg_conf.add_argument("--tau")
-    # Noise added to target policy during critic update
-    arg_conf.add_argument("--policy_noise")
-    # Range to clip target policy noise
-    arg_conf.add_argument("--noise_clip")
-    # Frequency of delayed policy updates
-    arg_conf.add_argument("--policy_freq", type=int)
-    # Save model and optimizer parameters
-    arg_conf.add_argument("--save_model", action="store_true")
-    # Model load file name, "" doesn't load, "default" uses file_name
-    arg_conf.add_argument("--load_model", default="")
-    # Learning rate of the actor
-    arg_conf.add_argument("--actor_lr", type=float)
-    # Learning rate of the critic
-    arg_conf.add_argument("--critic_lr", type=float)
-    # Print information to CLI
-    arg_conf.add_argument("--verbose", action="store_true")
-    parser = add_launcher_base_args(parser)
-    parser.set_defaults(**get_default_params(experiment))
-    args = parser.parse_args()
-    return vars(args)
 
 
+def main(_argv):
+    print(FLAGS.config)
+    run_experiment(experiment, FLAGS.config)
 # ----------------
 # main program
 # ----------------
 
+
 if __name__ == '__main__':
-    # Leave unchanged
-    args = parse_args()
-    run_experiment(experiment, args)
+    FLAGS = flags.FLAGS
+    config_flags.DEFINE_config_file('config', default='./config/default.py')
+    app.run(main)
+
 
 
 # _____________________________________________________________________________

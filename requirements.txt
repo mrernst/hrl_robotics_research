@@ -1,0 +1,4 @@
+absl-py
+ml-collections
+tensorboard
+pytorch
