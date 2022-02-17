@@ -11,18 +11,22 @@
 from itertools import product
 from util.launcher import Launcher
 
+
+from absl import flags, app
+from ml_collections.config_flags import config_flags
+
 # ----------------
 # main program
 # ----------------
-
-if __name__ == '__main__':
-    LOCAL = False
+def main(_argv):
+    print(FLAGS.config)
+    LOCAL = True
     TEST = False
     USE_CUDA = True
-
+    
     JOBLIB_PARALLEL_JOBS = 4  # or os.cpu_count() to use all cores
     N_SEEDS = 1
-
+    
     launcher = Launcher(exp_name='001',
                         python_file='main',
                         project_name='luna',
@@ -41,20 +45,37 @@ if __name__ == '__main__':
                         use_timestamp=True,
                         use_underscore_argparse=True
                         )
-
+    
     actor_learning_rates = [0.0003, 0.003, 0.03]
     critic_learning_rates = [0.0003, 0.003, 0.03]
     #b_c_list = [11, 12]
     #boolean_list = [True, False]
-
+    
     #launcher.add_default_params(default='b')
-
+    
     for ac_lr, cr_lr in product(actor_learning_rates, critic_learning_rates):
-        launcher.add_experiment(config.agent_cnf.actor_lr=ac_lr,
-                                config.agent_cnf.critic_lr=cr_lr)
+        # get the default parameters agent and main
+        # add experiments directly to the config
+        # b/c joblib passes arguments to experiment
+        if LOCAL:
+            FLAGS.config.agent.actor_lr = ac_lr
+            FLAGS.config.agent.critic_lr = cr_lr
+            launcher.add_experiment(**FLAGS.config)
+        else:
+            launcher.add_experiment(**{
+                'config.agent.actor_lr': ac_lr,
+                'config.agent.critic_lr': cr_lr
+            })
 
+    
     launcher.run(LOCAL, TEST)
+    
 
+
+if __name__ == '__main__':
+    FLAGS = flags.FLAGS
+    config_flags.DEFINE_config_file('config', default='./config/default.py')
+    app.run(main)
 # _____________________________________________________________________________
 
 # Stick to 80 characters per line

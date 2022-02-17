@@ -29,24 +29,43 @@ from agent.flat import Agent
 # custom functions
 # -----
 
+def experiment(main, agent, seed, results_dir, **kwargs):
+    """
+    wrapper function to translate variable names and to catch
+    unneeded additional joblib variables in local execution
+    """
+    training_loop(
+        main_cnf = main,
+        agent_cnf = agent,
+        seed = seed,
+        results_dir = results_dir
+    )
+    # space for post experiment analysis
+    pass
 
-def experiment(
-    main_cnf,
-    agent_cnf,
+
+def training_loop(
+    main_cnf,  # main experiment configuration
+    agent_cnf,  # agent configuration
     seed=0,  # This argument is mandatory
     results_dir='./save'  # This argument is mandatory
 ):
+    """
+    main experiment loop
+    
+    """
 
     # Create results directory
     os.makedirs(results_dir, exist_ok=True)
     # Save arguments
-    save_args(results_dir, locals(), git_repo_path='./')
+    # TODO make this work with nested dicts
+    #save_args(results_dir, locals(), git_repo_path='./')
 
-    
     file_name = f"{agent_cnf.policy_name}_{main_cnf.env_name}_{seed}"
 
     print("---------------------------------------")
-    print(f"Policy: {agent_cnf.policy_name}, Env: {main_cnf.env_name}, Seed: {seed}")
+    print(
+        f"Policy: {agent_cnf.policy_name}, Env: {main_cnf.env_name}, Seed: {seed}")
     print("---------------------------------------")
 
     env = gym.make(main_cnf.env_name)
@@ -78,7 +97,7 @@ def experiment(
         kwargs["policy_freq"] = agent_cnf.policy_freq
         kwargs["actor_lr"] = agent_cnf.actor_lr
         kwargs["critic_lr"] = agent_cnf.critic_lr
-        
+
         policy = TD3.TD3(**kwargs, name='flat')
     else:
         raise NotImplementedError()
@@ -86,14 +105,15 @@ def experiment(
     if main_cnf.load_model != "":
         policy_file = file_name if main_cnf.load_model == "default" else main_cnf.load_model
         policy.load(f"{results_dir}/{policy_file}")
-    
+
     results_dir = os.path.join(results_dir, str(seed))
-    
+
     # choose replay buffer
     replay_buffer = ReplayBuffer(state_dim, action_dim)
 
     # Initialize Agent with policy
-    agent = Agent(action_dim, policy, replay_buffer, burnin=main_cnf.start_timesteps)
+    agent = Agent(action_dim, policy, replay_buffer,
+                  burnin=main_cnf.start_timesteps)
 
     # Evaluate untrained policy
     agent.eval_policy(main_cnf.env_name, seed)
@@ -109,7 +129,7 @@ def experiment(
     # start logging of parameters
     # initialize logger
     logger = MetricLogger(results_dir)
-    
+
     # training loop
     for t in range(int(main_cnf.max_timesteps)):
 
@@ -122,7 +142,8 @@ def experiment(
         if t < main_cnf.start_timesteps:
             action = env.action_space.sample()
         else:
-            action = agent.select_action(state, max_action, agent_cnf.expl_noise)
+            action = agent.select_action(
+                state, max_action, agent_cnf.expl_noise)
 
         # 5. Agent performs action
         next_state, reward, done, _ = env.step(action)
@@ -137,10 +158,10 @@ def experiment(
 
         # 9. Update state
         state = next_state
-        
+
         # 8. Logging / updating metrics
         logger.log_step(reward, None, None)
-        
+
         # 7. Learn
         # Train agent after collecting sufficient data
         if t >= main_cnf.start_timesteps:
@@ -161,34 +182,37 @@ def experiment(
 
             # 10. Episode based metrics, automatically resets episode timesteps
             logger.log_episode()
-        
+
         # Evaluate episode
         if (t + 1) % main_cnf.eval_freq == 0:
             eval_episodes = 10
-            avg_reward = agent.eval_policy(main_cnf.env_name, seed, eval_episodes)
+            avg_reward = agent.eval_policy(
+                main_cnf.env_name, seed, eval_episodes)
             if main_cnf.verbose:
                 print(" " * 80 + "\r" + "---------------------------------------")
-                print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}")
+                print(
+                    f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}")
                 print("---------------------------------------")
-            
+
             # log results
             logger.write_to_tensorboard(t)
             logger.writer.add_scalar(
                 'training/eval_reward', agent.evaluations[-1], t)
             for k in agent.policy.curr_train_metrics.keys():
-                logger.writer.add_scalar(f"agent/{k}", agent.policy.curr_train_metrics[k], t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.actor.parameters()]).detach(), "agent/actor/weights", logger.writer, t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters()]).detach(), "agent/critic/weights", logger.writer, t)
-            
-            
+                logger.writer.add_scalar(
+                    f"agent/{k}", agent.policy.curr_train_metrics[k], t)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.actor.parameters(
+            )]).detach(), "agent/actor/weights", logger.writer, t)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters(
+            )]).detach(), "agent/critic/weights", logger.writer, t)
+
             if main_cnf.save_model:
                 policy.save(f"{results_dir}/{file_name}")
-    
+
             # video evaluation if model is loaded
             if main_cnf.load_model != "":
-                agent.create_policy_eval_video(main_cnf.env_name, seed, results_dir + f"/t_{t+1}")
-
-
+                agent.create_policy_eval_video(
+                    main_cnf.env_name, seed, results_dir + f"/t_{t+1}")
 
 
 def main(_argv):
@@ -203,7 +227,6 @@ if __name__ == '__main__':
     FLAGS = flags.FLAGS
     config_flags.DEFINE_config_file('config', default='./config/default.py')
     app.run(main)
-
 
 
 # _____________________________________________________________________________
