@@ -43,10 +43,10 @@ def experiment(
     save_args(results_dir, locals(), git_repo_path='./')
 
     
-    file_name = f"{main_cnf.policy_name}_{main_cnf.env_name}_{seed}"
+    file_name = f"{agent_cnf.policy_name}_{main_cnf.env_name}_{seed}"
 
     print("---------------------------------------")
-    print(f"Policy: {main_cnf.policy_name}, Env: {main_cnf.env_name}, Seed: {seed}")
+    print(f"Policy: {agent_cnf.policy_name}, Env: {main_cnf.env_name}, Seed: {seed}")
     print("---------------------------------------")
 
     env = gym.make(main_cnf.env_name)
@@ -71,7 +71,7 @@ def experiment(
         "tau": agent_cnf.tau,
     }
 
-    if main_cnf.policy_name == "TD3":
+    if agent_cnf.policy_name == "TD3":
         # Target policy smoothing is scaled wrt the action scale
         kwargs["policy_noise"] = agent_cnf.policy_noise * max_action
         kwargs["noise_clip"] = agent_cnf.noise_clip * max_action
