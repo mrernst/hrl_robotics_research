@@ -50,8 +50,8 @@ if __name__ == '__main__':
     #launcher.add_default_params(default='b')
 
     for ac_lr, cr_lr in product(actor_learning_rates, critic_learning_rates):
-        launcher.add_experiment(actor_lr=ac_lr,
-                                critic_lr=cr_lr)
+        launcher.add_experiment(config.agent_cnf.actor_lr=ac_lr,
+                                config.agent_cnf.critic_lr=cr_lr)
 
     launcher.run(LOCAL, TEST)
 
