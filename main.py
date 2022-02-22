@@ -51,8 +51,7 @@ def training_loop(
     results_dir='./save'  # This argument is mandatory
 ):
     """
-    main experiment loop
-    
+    main experiment loop for training the RL Agent
     """
 
     # Create results directory
@@ -127,7 +126,6 @@ def training_loop(
     # state = np.concatenate([state[k] for k in state.keys()])
 
     # start logging of parameters
-    # initialize logger
     logger = MetricLogger(results_dir)
 
     # training loop
@@ -137,8 +135,6 @@ def training_loop(
         # env.render()
 
         # 4. Run agent on the state (get the action)
-        # Select action randomly or according to policy
-
         if t < main_cnf.start_timesteps:
             action = env.action_space.sample()
         else:
