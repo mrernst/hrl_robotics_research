@@ -29,9 +29,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 # -----
 
 class Agent(object):
-    def __init__(self, action_dim, policy, replay_buffer, burnin):
+    def __init__(self, action_dim, algorithm, replay_buffer, burnin):
         self.action_dim = action_dim
-        self.policy = policy
+        self.algorithm = algorithm
         self.replaybuffer = replay_buffer
         self.evaluations = []
         self.burnin = burnin
@@ -42,17 +42,17 @@ class Agent(object):
         Select according to policy with random noise
         """
         action = (
-            self.policy.select_action(np.array(state))
+            self.algorithm.select_action(np.array(state))
             + np.random.normal(0, max_action * noise, size=self.action_dim)
         ).clip(-max_action, max_action)
 
         return action
 
     def add_to_memory(self, state, action, next_state, reward, done):
-        self.replaybuffer.add(state, action, next_state, reward, done)
+        self.replaybuffer.add(None, None, state, action, next_state, reward, done)
 
     def learn(self, batch_size):
-        self.policy.train(self.replaybuffer, batch_size)
+        self.algorithm.train(self.replaybuffer, batch_size)
         pass
 
     def reset(self):
@@ -71,7 +71,7 @@ class Agent(object):
             state, done = eval_env.reset(), False
             # state = np.concatenate([state[k] for k in state.keys()])
             while not done:
-                action = self.policy.select_action(np.array(state))
+                action = self.algorithm.select_action(np.array(state))
                 state, reward, done, _ = eval_env.step(action)
                 # state = np.concatenate([state[k] for k in state.keys()])
                 avg_reward += reward
@@ -90,7 +90,7 @@ class Agent(object):
                 state, done = eval_env.reset(), False
                 video.append_data(eval_env.render(mode='rgb_array'))
                 while not done:
-                    action = self.policy.select_action(np.array(state))
+                    action = self.algorithm.select_action(np.array(state))
                     state, reward, done, _ = eval_env.step(action)
                     video.append_data(eval_env.render(mode='rgb_array'))
         pass
