@@ -40,33 +40,49 @@ def get_config():
 				'verbose': False,
 			},
 			'agent': {
-				# Policy name (TD3, or else if implemented)
-				'policy_name': "TD3",
-				# Std of Gaussian exploration noise
-				'expl_noise': 0.1,
-				# Batch size for both actor and critic
-				'batch_size': 256,
-				# Discount factor
-				'discount': 0.99,
-				# Target network update rate
-				'tau': 0.005,
-				# Noise added to target policy during critic update
-				'policy_noise': 0.2,
-				# Range to clip target policy noise
-				'noise_clip': 0.5,
-				# Frequency of delayed policy updates
-				'policy_freq': 2,
-				# Learning rate of the actor
-				'actor_lr': 0.0003,
-				# Learning rate of the critic
-				'critic_lr': 0.0003,
+				# Algorithm name (TD3, or else if implemented)
+				'algorithm_name': "TD3",
 				# sub agent configuration
 				'sub': {
-					'placeholder': 1,
+					# Std of Gaussian exploration noise
+					'expl_noise': 0.1,
+					# Batch size for both actor and critic
+					'batch_size': 256,
+					# Discount factor
+					'discount': 0.99,
+					# Target network update rate
+					'tau': 0.005,
+					# Noise added to target policy during critic update
+					'policy_noise': 0.2,
+					# Range to clip target policy noise
+					'noise_clip': 0.5,
+					# Frequency of delayed policy updates
+					'policy_freq': 2,
+					# Learning rate of the actor
+					'actor_lr': 0.0003,
+					# Learning rate of the critic
+					'critic_lr': 0.0003,
 				},
 				# meta agent configuration
 				'meta': {
-					'placeholder': 1,
+					# Std of Gaussian exploration noise
+					'expl_noise': 0.1,
+					# Batch size for both actor and critic
+					'batch_size': 256,
+					# Discount factor
+					'discount': 0.99,
+					# Target network update rate
+					'tau': 0.005,
+					# Noise added to target policy during critic update
+					'policy_noise': 0.2,
+					# Range to clip target policy noise
+					'noise_clip': 0.5,
+					# Frequency of delayed policy updates
+					'policy_freq': 2,
+					# Learning rate of the actor
+					'actor_lr': 0.0003,
+					# Learning rate of the critic
+					'critic_lr': 0.0003,
 				}
 			},
 		}
