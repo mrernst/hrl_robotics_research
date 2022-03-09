@@ -26,6 +26,9 @@ import algo.td3 as TD3
 from util.logger import MetricLogger, log_tensor_stats
 
 from agent.flat import Agent
+from agent.hierarchical import HIRO
+
+import env.mujoco as mujoco_envs
 # custom functions
 # -----
 
@@ -60,64 +63,74 @@ def training_loop(
     # TODO make this work with nested dicts
     #save_args(results_dir, locals(), git_repo_path='./')
 
-    file_name = f"{agent_cnf.policy_name}_{main_cnf.env_name}_{seed}"
+    file_name = f"{agent_cnf.algorithm_name}_{main_cnf.env_name}_{seed}"
 
     print("---------------------------------------")
     print(
-        f"Policy: {agent_cnf.policy_name}, Env: {main_cnf.env_name}, Seed: {seed}")
+        f"Policy: {agent_cnf.algorithm_name}, Env: {main_cnf.env_name}, Seed: {seed}")
     print("---------------------------------------")
 
+    # Create world
     env = gym.make(main_cnf.env_name)
+    
     # Set seeds
     env.seed(seed)
     env.action_space.seed(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
+    
+    results_dir = os.path.join(results_dir, str(seed))
+    
 
+    
+    
     state_dim = env.observation_space.shape[0]
-    # state_dim = np.sum(
-    #    [env.observation_space.spaces[k].shape for k in env.observation_space.spaces.keys()])
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
-
-    # Initialize RL algorithm
+    
+    # initialize_agent(agent_class, )
+    
+    # Initialize RL algorithm (outsource into a function)
     kwargs = {
         "state_dim": state_dim,
         "action_dim": action_dim,
         "max_action": max_action,
-        "discount": agent_cnf.discount,
-        "tau": agent_cnf.tau,
+        "discount": agent_cnf.sub.discount,
+        "tau": agent_cnf.sub.tau,
     }
 
-    if agent_cnf.policy_name == "TD3":
+    if agent_cnf.algorithm_name == "TD3":
         # Target policy smoothing is scaled wrt the action scale
-        kwargs["policy_noise"] = agent_cnf.policy_noise * max_action
-        kwargs["noise_clip"] = agent_cnf.noise_clip * max_action
-        kwargs["policy_freq"] = agent_cnf.policy_freq
-        kwargs["actor_lr"] = agent_cnf.actor_lr
-        kwargs["critic_lr"] = agent_cnf.critic_lr
+        kwargs["policy_noise"] = agent_cnf.sub.policy_noise * max_action
+        kwargs["noise_clip"] = agent_cnf.sub.noise_clip * max_action
+        kwargs["policy_freq"] = agent_cnf.sub.policy_freq
+        kwargs["actor_lr"] = agent_cnf.sub.actor_lr
+        kwargs["critic_lr"] = agent_cnf.sub.critic_lr
 
-        policy = TD3.TD3(**kwargs, name='flat')
+        algorithm = TD3.TD3(**kwargs, name='sub')
     else:
         raise NotImplementedError()
 
     if main_cnf.load_model != "":
-        policy_file = file_name if main_cnf.load_model == "default" else main_cnf.load_model
-        policy.load(f"{results_dir}/{policy_file}")
+        model_file = file_name if main_cnf.load_model == "default" else main_cnf.load_model
+        policy.load(f"{results_dir}/{model_file}")
 
-    results_dir = os.path.join(results_dir, str(seed))
 
     # choose replay buffer
-    replay_buffer = ReplayBuffer(state_dim, action_dim)
+    replay_buffer = ReplayBuffer(state_dim, action_dim, sequence_dim=1, offpolicy=False)
 
-    # Initialize Agent with policy
-    agent = Agent(action_dim, policy, replay_buffer,
+    # Initialize agent with algorithm
+    agent = Agent(action_dim, algorithm, replay_buffer,
                   burnin=main_cnf.start_timesteps)
-
+    
+    
     # Evaluate untrained policy
     agent.eval_policy(main_cnf.env_name, seed)
     # delete: evaluations = [eval_policy(policy, main_cnf.env_name, seed)]
-
+    
+    
+    
+    
     # Main training loop
     # -----
 
@@ -139,7 +152,7 @@ def training_loop(
             action = env.action_space.sample()
         else:
             action = agent.select_action(
-                state, max_action, agent_cnf.expl_noise)
+                state, max_action, agent_cnf.sub.expl_noise)
 
         # 5. Agent performs action
         next_state, reward, done, _ = env.step(action)
@@ -161,7 +174,7 @@ def training_loop(
         # 7. Learn
         # Train agent after collecting sufficient data
         if t >= main_cnf.start_timesteps:
-            agent.learn(agent_cnf.batch_size)
+            agent.learn(agent_cnf.sub.batch_size)
 
         if done:
             # +1 to account for 0 indexing. +0 on ep_timesteps
@@ -194,12 +207,12 @@ def training_loop(
             logger.write_to_tensorboard(t)
             logger.writer.add_scalar(
                 'training/eval_reward', agent.evaluations[-1], t)
-            for k in agent.policy.curr_train_metrics.keys():
+            for k in agent.algorithm.curr_train_metrics.keys():
                 logger.writer.add_scalar(
-                    f"agent/{k}", agent.policy.curr_train_metrics[k], t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.actor.parameters(
+                    f"agent/{k}", agent.algorithm.curr_train_metrics[k], t)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.algorithm.actor.parameters(
             )]).detach(), "agent/actor/weights", logger.writer, t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.policy.critic.parameters(
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.algorithm.critic.parameters(
             )]).detach(), "agent/critic/weights", logger.writer, t)
 
             if main_cnf.save_model:
