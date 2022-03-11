@@ -33,12 +33,12 @@ def init_weights(m):
 
 
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, max_action):
+    def __init__(self, state_dim, action_dim, max_action, hidden_layers):
         super(Actor, self).__init__()
 
-        self.l1 = nn.Linear(state_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, action_dim)
+        self.l1 = nn.Linear(state_dim, hidden_layers[0])
+        self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])
+        self.l3 = nn.Linear(hidden_layers[1], action_dim)
 
         self.max_action = max_action
 
@@ -49,18 +49,18 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, hidden_layers):
         super(Critic, self).__init__()
 
         # Q1 architecture
-        self.l1 = nn.Linear(state_dim + action_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 1)
+        self.l1 = nn.Linear(state_dim + action_dim, hidden_layers[0])
+        self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])
+        self.l3 = nn.Linear(hidden_layers[1], 1)
 
         # Q2 architecture
-        self.l4 = nn.Linear(state_dim + action_dim, 256)
-        self.l5 = nn.Linear(256, 256)
-        self.l6 = nn.Linear(256, 1)
+        self.l4 = nn.Linear(state_dim + action_dim, hidden_layers[0])
+        self.l5 = nn.Linear(hidden_layers[0], hidden_layers[1])
+        self.l6 = nn.Linear(hidden_layers[1], 1)
 
     def forward(self, state, action):
         sa = torch.cat([state, action], 1)
@@ -96,15 +96,17 @@ class TD3(object):
             policy_freq=2,
             actor_lr = 0.0003,
             critic_lr = 0.0003,
+            actor_hidden_layers=[256, 256],
+            critic_hidden_layers=[256, 256],
             name='default',
     ):
 
-        self.actor = Actor(state_dim, action_dim, max_action).to(device)
+        self.actor = Actor(state_dim, action_dim, max_action, actor_hidden_layers).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(), lr=actor_lr)
 
-        self.critic = Critic(state_dim, action_dim).to(device)
+        self.critic = Critic(state_dim, action_dim, critic_hidden_layers).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(), lr=critic_lr)
