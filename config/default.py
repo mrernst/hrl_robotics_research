@@ -40,6 +40,8 @@ def get_config():
 				'verbose': False,
 			},
 			'agent': {
+				# Agent name (flat or HIRO)
+				'agent_name': "flat",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
 				# sub agent configuration
@@ -62,6 +64,10 @@ def get_config():
 					'actor_lr': 0.0003,
 					# Learning rate of the critic
 					'critic_lr': 0.0003,
+					# Hidden layer size of the actor
+					'actor_hidden_layers': [256, 256],
+					# Hidden layer size of the critic
+					'critic_hidden_layers': [256, 256],
 				},
 				# meta agent configuration
 				'meta': {
@@ -83,6 +89,10 @@ def get_config():
 					'actor_lr': 0.0003,
 					# Learning rate of the critic
 					'critic_lr': 0.0003,
+					# Hidden layer size of the actor
+					'actor_hidden_layers': [256, 256],
+					# Hidden layer size of the critic
+					'critic_hidden_layers': [256, 256],
 				}
 			},
 		}
