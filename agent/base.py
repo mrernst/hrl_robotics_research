@@ -19,6 +19,7 @@ import sys
 import imageio
 import base64
 
+from gym.wrappers.monitoring import video_recorder
 
 # utilities
 # -----
@@ -53,8 +54,9 @@ class Agent(object):
 	def evaluate_policy(self, env, eval_episodes=10, render=False, save_video=False, sleep=-1):
 		if save_video:
 			from OpenGL import GL
-			env = gym.wrappers.Monitor(env, directory='video',
-									write_upon_reset=True, force=True, resume=True, mode='evaluation')
+			#env = gym.wrappers.Monitor(env, directory='video',
+			#						write_upon_reset=True, force=True, resume=True, mode='evaluation')
+			video = imageio.get_writer('video/file.mp4', fps=30)
 			render = False
 	
 		success = 0
@@ -82,9 +84,12 @@ class Agent(object):
 				s = n_s
 				step += 1
 				self.end_step()
+				if save_video:
+					video.append_data(env.render(mode='rgb_array'))
 			else:
 				error = np.sqrt(np.sum(np.square(fg-s[:2])))
-				print('Goal, Curr: (%02.2f, %02.2f, %02.2f, %02.2f)     Error:%.2f'%(fg[0], fg[1], s[0], s[1], error))
+				print(" " * 80 + "\r" +
+				'[Eval] Goal, Curr: (%02.2f, %02.2f, %02.2f, %02.2f)     Error:%.2f'%(fg[0], fg[1], s[0], s[1], error), end='\r')
 				rewards.append(reward_episode_sum)
 				success += 1 if error <=5 else 0
 				self.end_episode(e)
