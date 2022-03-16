@@ -25,7 +25,11 @@ def get_config():
 		{
 			'main': {
 				# OpenAI gym environment name
-				'env_name': "Reacher-v2",
+				'env_name': "AntMaze",
+				# General Training parameter
+				'train': True,
+				# General Evaluation parameter
+				'evaluate': True,
 				# Time steps initial random policy is used
 				'start_timesteps': 25e3,
 				# How often (time steps) we evaluate
@@ -34,13 +38,15 @@ def get_config():
 				'max_timesteps': 1e6,
 				# Save model and optimizer parameters
 				'save_model': False,
+				# Save model every n timesteps
+				'model_save_freq': 1e5,
 				# Model load file name, "" doesn't load, "default" uses file_name
 				'load_model': "",
 				# Print information to CLI
 				'verbose': False,
 			},
 			'agent': {
-				# Agent name (flat or HIRO)
+				# Agent name (flat or hierarchical)
 				'agent_name': "flat",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
@@ -48,6 +54,8 @@ def get_config():
 				'sub': {
 					# Std of Gaussian exploration noise
 					'expl_noise': 0.1,
+					# Buffer size
+					'buffer_size': int(1e6),
 					# Batch size for both actor and critic
 					'batch_size': 256,
 					# Discount factor
@@ -73,6 +81,8 @@ def get_config():
 				'meta': {
 					# Std of Gaussian exploration noise
 					'expl_noise': 0.1,
+					# Buffer size
+					'buffer_size': int(1e6),
 					# Batch size for both actor and critic
 					'batch_size': 256,
 					# Discount factor
