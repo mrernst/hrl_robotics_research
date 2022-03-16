@@ -65,6 +65,7 @@ class Agent(object):
 		for e in range(eval_episodes):
 			obs = env.reset()
 			fg = obs['desired_goal']
+			fg_dim = fg.shape[0]
 			s = obs['observation']
 			done = False
 			reward_episode_sum = 0
@@ -87,7 +88,7 @@ class Agent(object):
 				if save_video:
 					video.append_data(env.render(mode='rgb_array'))
 			else:
-				error = np.sqrt(np.sum(np.square(fg-s[:2])))
+				error = np.sqrt(np.sum(np.square(fg-s[:fg_dim])))
 				print(" " * 80 + "\r" +
 				'[Eval] Goal, Curr: (%02.2f, %02.2f, %02.2f, %02.2f)     Error:%.2f'%(fg[0], fg[1], s[0], s[1], error), end='\r')
 				rewards.append(reward_episode_sum)
