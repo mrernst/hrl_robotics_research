@@ -87,53 +87,87 @@ class TD3(object):
     def __init__(
             self,
             state_dim,
+            goal_dim,
             action_dim,
             max_action,
-            discount=0.99,
-            tau=0.005,
-            policy_noise=0.2,
-            noise_clip=0.5,
-            policy_freq=2,
+            model_path,
             actor_lr = 0.0003,
             critic_lr = 0.0003,
             actor_hidden_layers=[256, 256],
             critic_hidden_layers=[256, 256],
+            expl_noise=0.1,
+            policy_noise=0.2,
+            noise_clip=0.5,
+            discount=0.99,
+            policy_freq=2,
+            tau=0.005,
             name='default',
     ):
 
-        self.actor = Actor(state_dim, action_dim, max_action, actor_hidden_layers).to(device)
+        self.actor = Actor(state_dim + goal_dim, action_dim, max_action, actor_hidden_layers).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(), lr=actor_lr)
 
-        self.critic = Critic(state_dim, action_dim, critic_hidden_layers).to(device)
+        self.critic = Critic(state_dim + goal_dim, action_dim, critic_hidden_layers).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(), lr=critic_lr)
-
+            
+        # parameters
         self.max_action = max_action
         self.discount = discount
-        self.tau = tau
+        self.expl_noise = expl_noise
         self.policy_noise = policy_noise
         self.noise_clip = noise_clip
         self.policy_freq = policy_freq
+        self.tau = tau
         self.name = name
         
         self.curr_train_metrics = {}
 
         self.total_it = 0
 
-    def select_action(self, state):
+    
+    def policy(self, state, goal, to_numpy=True):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        return self.actor(state).cpu().data.numpy().flatten()
+        goal = torch.FloatTensor(goal.reshape(1, -1)).to(device)
+        action = self.actor(torch.cat([state, goal], 1))
+    
+        if to_numpy:
+            return action.cpu().data.numpy().squeeze()
+    
+        return action.squeeze()
+    
+    def policy_with_noise(self, state, goal, to_numpy=True):
+        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+        goal = torch.FloatTensor(goal.reshape(1, -1)).to(device)
+        action = self.actor(torch.cat([state, goal], 1))
+        
+        action = action + self._sample_exploration_noise(action)
+        action = torch.min(action,  self.max_action)
+        action = torch.max(action, -self.max_action)
+    
+        if to_numpy:
+            return action.cpu().data.numpy().squeeze()
+    
+        return action.squeeze()
+    
+    def _sample_exploration_noise(self, actions):
+        mean = torch.zeros(actions.size()).to(device)
+        var = torch.ones(actions.size()).to(device)
+        #expl_noise = self.expl_noise - (self.expl_noise/1200) * (self.total_it//10000)
+        return torch.normal(mean, self.expl_noise*var)
 
-    def train(self, replay_buffer, batch_size=256):        
+    def _train(self, state, goal, action, reward, next_state, next_goal, not_done): 
         self.total_it += 1
-
-        # Sample replay buffer
-        _, _, state, action, next_state, reward, not_done = replay_buffer.sample(
-            batch_size)
-
+        
+        # check_
+        state = torch.cat([state, goal], 1)
+        next_state = torch.cat([next_state, goal], 1)
+        # This is probably not correct!!
+        
+        
         with torch.no_grad():
             # Select action according to policy and add clipped noise
             noise = (
@@ -153,8 +187,8 @@ class TD3(object):
         current_Q1, current_Q2 = self.critic(state, action)
 
         # Compute critic loss
-        critic_loss = F.mse_loss(current_Q1, target_Q) + \
-            F.mse_loss(current_Q2, target_Q)
+        critic_loss = F.smooth_l1_loss(current_Q1, target_Q) + \
+            F.smooth_l1_loss(current_Q2, target_Q)
         
         # Optimize the critic
         self.critic_optimizer.zero_grad()
@@ -165,8 +199,10 @@ class TD3(object):
         with torch.no_grad():
             norm_type = 2
             cr_gr_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in self.critic.parameters()]), norm_type)
+            td_error = (target_Q - current_Q1).mean().cpu().data.numpy()
             self.curr_train_metrics['critic/gradients/norm'] = cr_gr_norm
             self.curr_train_metrics['critic/loss'] = critic_loss
+            self.curr_train_metrics['td_error'] = td_error
         
         #         # tensorboard_writer.add_histogram(f'{self.name}/value/critic_weights',(torch.cat([p.flatten() for p in self.critic.parameters()])).detach().numpy(), self.total_it)
           
@@ -190,34 +226,47 @@ class TD3(object):
                 self.curr_train_metrics['actor/loss'] = actor_loss
             
             # Update the frozen target models
-            for param, target_param in zip(self.critic.parameters(),
-                                           self.critic_target.parameters()):
-                target_param.data.copy_(
-                    self.tau * param.data + (1 - self.tau) * target_param.data)
-
-            for param, target_param in zip(self.actor.parameters(),
-                                           self.actor_target.parameters()):
-                target_param.data.copy_(
-                    self.tau * param.data + (1 - self.tau) * target_param.data)
-
-    def save(self, filename):
-        torch.save(self.critic.state_dict(), filename + "_critic")
+            self._update_target_network(self.critic_target, self.critic, self.tau)
+            self._update_target_network(self.actor_target, self.actor, self.tau)
+        
+        return self.curr_train_metrics
+    
+    def train(self, replay_buffer):
+        state, goal, action, next_state, reward, not_done = replay_buffer.sample()
+        return self._train(state, goal, action, reward, next_state, goal, not_done)
+    
+    
+    def _update_target_network(self, target, origin, tau):
+        for origin_param, target_param in zip(target.parameters(), origin.parameters()):
+            target_param.data.copy_(tau * origin_param.data + (1.0 - tau) * target_param.data)
+        
+    def save(self, timestep):
+        # create episode directory. (e.g. model/2000)
+        model_path = os.path.join(self.model_path, str(timestep))
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+        
+        
+        
+        torch.save(self.critic.state_dict(), os.path.join(model_path, self.name+"_critic"))
         torch.save(self.critic_optimizer.state_dict(),
-                   filename + "_critic_optimizer")
+                   os.path.join(model_path, self.name+"_critic_optimizer"))
 
-        torch.save(self.actor.state_dict(), filename + "_actor")
+        torch.save(self.actor.state_dict(), os.path.join(model_path, self.name+"_actor"))
         torch.save(self.actor_optimizer.state_dict(),
-                   filename + "_actor_optimizer")
+                   os.path.join(model_path, self.name+"_actor_optimizer"))
 
-    def load(self, filename):
-        self.critic.load_state_dict(torch.load(filename + "_critic", map_location=torch.device(device)))
+    def load(self, timestep):
+        model_path = os.path.join(self.model_path, str(episode)) 
+        
+        self.critic.load_state_dict(torch.load(os.path.join(model_path, self.name+"_critic"), map_location=torch.device(device)))
         self.critic_optimizer.load_state_dict(
-            torch.load(filename + "_critic_optimizer", map_location=torch.device(device)))
+            torch.load(os.path.join(model_path, self.name+"_critic_optimizer"), map_location=torch.device(device)))
         self.critic_target = copy.deepcopy(self.critic)
 
-        self.actor.load_state_dict(torch.load(filename + "_actor", map_location=torch.device(device)))
+        self.actor.load_state_dict(torch.load(os.path.join(model_path, self.name+"_actor"), map_location=torch.device(device)))
         self.actor_optimizer.load_state_dict(
-            torch.load(filename + "_actor_optimizer", map_location=torch.device(device)))
+            torch.load(os.path.join(model_path, self.name+"_actor_optimizer"), map_location=torch.device(device)))
         self.actor_target = copy.deepcopy(self.actor)
 
 
