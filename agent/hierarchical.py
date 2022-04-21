@@ -215,8 +215,9 @@ class HiroAgent(Agent):
     def end_episode(self, episode, logger=None):
         if logger: 
             # log
-            logger.write('reward/Intrinsic Reward', self.episode_subreward, episode)
-    
+            #logger.write('reward/Intrinsic Reward', self.episode_subreward, episode)
+            logger.add_scalar(
+            'training/intrinsic_reward', self.episode_subreward, episode)
             # Save Model
             if _is_update(episode, self.model_save_freq):
                 self.save(episode=episode)

@@ -215,7 +215,7 @@ def training_loop(
 
         # episode is done
         if done:
-            agent.end_episode(logger.episode_number, main_cnf.save_model)
+            agent.end_episode(logger.episode_number, logger.writer)
             # +1 to account for 0 indexing. +0 on ep_timesteps
             # since it will increment +1 even if done=True
             if main_cnf.verbose:
