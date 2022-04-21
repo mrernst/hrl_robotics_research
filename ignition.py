@@ -24,7 +24,7 @@ def main(_argv):
     TEST = False
     USE_CUDA = True
     
-    JOBLIB_PARALLEL_JOBS = 4  # or os.cpu_count() to use all cores
+    JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
     N_SEEDS = 1
     
     launcher = Launcher(exp_name='001',
@@ -47,27 +47,35 @@ def main(_argv):
                         )
     
     
-    actor_learning_rates = [0.0003, 0.003, 0.03]
-    critic_learning_rates = [0.0003, 0.003, 0.03]
-    #b_c_list = [11, 12]
-    #boolean_list = [True, False]
-    
-    #launcher.add_default_params(default='b')
-    
-    for ac_lr, cr_lr in product(actor_learning_rates, critic_learning_rates):
-        # get the default parameters agent and main
-        # add experiments directly to the config
-        # b/c joblib passes arguments to experiment
+    # actor_learning_rates = [0.0003, 0.003, 0.03]
+    # critic_learning_rates = [0.0003, 0.003, 0.03]
+    # #b_c_list = [11, 12]
+    # #boolean_list = [True, False]
+    # 
+    # #launcher.add_default_params(default='b')
+    # 
+    # for ac_lr, cr_lr in product(actor_learning_rates, critic_learning_rates):
+    #     # get the default parameters agent and main
+    #     # add experiments directly to the config
+    #     # b/c joblib passes arguments to experiment
+    #     if LOCAL:
+    #         FLAGS.config.agent.sub.actor_lr = ac_lr
+    #         FLAGS.config.agent.sub.critic_lr = cr_lr
+    #         launcher.add_experiment(**FLAGS.config)
+    #     else:
+    #         launcher.add_experiment(**{
+    #             'config.agent.sub.actor_lr': ac_lr,
+    #             'config.agent.sub.critic_lr': cr_lr
+    #         })
+    # 
+    agent_type = ['flat', 'hiro']
+    for at in agent_type:
         if LOCAL:
-            FLAGS.config.agent.sub.actor_lr = ac_lr
-            FLAGS.config.agent.sub.critic_lr = cr_lr
-            launcher.add_experiment(**FLAGS.config)
+            pass
         else:
             launcher.add_experiment(**{
-                'config.agent.sub.actor_lr': ac_lr,
-                'config.agent.sub.critic_lr': cr_lr
+                'config.agent.agent_type': at
             })
-
     
     launcher.run(LOCAL, TEST)
     
