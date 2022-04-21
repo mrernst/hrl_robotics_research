@@ -51,12 +51,13 @@ class Agent(object):
 	def end_episode(self, episode, logger=None):
 		raise NotImplementedError
 	
-	def evaluate_policy(self, env, eval_episodes=10, render=False, save_video=False, timestep=-1, sleep=-1):
+	def evaluate_policy(self, env, eval_episodes=10, render=False, save_video=False, sleep=-1, results_dir='./save', timestep=-1):
 		if save_video:
 			from OpenGL import GL
 			#env = gym.wrappers.Monitor(env, directory='video',
 			#						write_upon_reset=True, force=True, resume=True, mode='evaluation')
-			video = imageio.get_writer('video/t{}.mp4'.format(timestep), fps=30)
+			os.makedirs(f'{results_dir}/video/', exist_ok = True)
+			video = imageio.get_writer(f'{results_dir}/video/t{timestep}.mp4', fps=30)
 			render = False
 	
 		success = 0

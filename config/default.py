@@ -35,15 +35,17 @@ def get_config():
 				# How often (time steps) we evaluate
 				'eval_freq': 5e3,
 				# Max time steps to run environment
-				'max_timesteps': 1e6,
+				'max_timesteps': 10e6,
 				# Subgoal dimension
 				'subgoal_dim':15,
 				# Save model and optimizer parameters
-				'save_model': False,
+				'save_model': True,
 				# Save model every n timesteps
-				'model_save_freq': 1e5,
-				# Model load file name, "" doesn't load, "default" uses file_name
-				'load_model': "",
+				'model_save_freq': 1000,
+				# Model timestep to load
+				'load_model': False,
+				# Load Model
+				'load_episode': -1,
 				# Print information to CLI
 				'verbose': False,
 			},

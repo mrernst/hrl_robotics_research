@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -258,9 +259,9 @@ class TD3Controller(object):
             target_param.data.copy_(
                 tau * origin_param.data + (1.0 - tau) * target_param.data)
 
-    def save(self, timestep):
+    def save(self, episode):
         # create episode directory. (e.g. model/2000)
-        model_path = os.path.join(self.model_path, str(timestep))
+        model_path = os.path.join(self.model_path, str(episode))
         if not os.path.exists(model_path):
             os.makedirs(model_path)
 
@@ -274,7 +275,14 @@ class TD3Controller(object):
         torch.save(self.actor_optimizer.state_dict(),
                    os.path.join(model_path, self.name+"_actor_optimizer"))
 
-    def load(self, timestep):
+    def load(self, episode):
+        # episode is -1, then read most updated
+        if episode<0:
+            episode_list = map(int, os.listdir(self.model_path))
+            episode = max(episode_list)
+            print(" " * 80 + "\r" + f'[INFO] Loaded model at episode {episode}')
+
+
         model_path = os.path.join(self.model_path, str(episode))
 
         self.critic.load_state_dict(torch.load(os.path.join(

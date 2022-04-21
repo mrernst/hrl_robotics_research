@@ -36,12 +36,10 @@ import env.mujoco as emj
 # custom functions
 # -----
 
-def final_evaluation(main_cnf, timestep, env, agent):
-    # load agent from file...
-    #agent.load(args.load_episode)
+def final_evaluation(main_cnf, timestep, env, agent, results_dir):
 
     #rewards, success_rate = agent.evaluate_policy(env, main_cnf.eval_episodes, main_cnf.render, main_cnf.save_video, main_cnf.sleep)
-    rewards, success_rate = agent.evaluate_policy(env, 10, True, True, timestep, -1)
+    rewards, success_rate = agent.evaluate_policy(env, 10, True, True, -1, results_dir, timestep)
     
     print('mean:{mean:.2f}, \
             std:{std:.2f}, \
@@ -143,7 +141,6 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     else:
         raise NotImplementedError('Choose between flat and hierarchical (hiro) agent')
     
-    
     if main_cnf.train:
         training_loop(
             main_cnf = main_cnf,
@@ -154,7 +151,16 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             results_dir = results_dir
         )
     if main_cnf.evaluate:
-        final_evaluation(main_cnf, main_cnf.max_timesteps, env, agent)
+        if main_cnf.load_model:
+            # load agent from file...
+            print(" " * 80 + "\r" + "---------------------------------------")
+            print(
+              f"[INFO] Attempting loading model at episode {main_cnf.load_episode}]",
+              end="\r")
+        
+            agent.load(main_cnf.load_episode)
+            print("---------------------------------------")
+        final_evaluation(main_cnf, main_cnf.max_timesteps, env, agent, results_dir)
     
      
     # space for post experiment analysis
@@ -209,7 +215,7 @@ def training_loop(
 
         # episode is done
         if done:
-            agent.end_episode(logger.episode_number)
+            agent.end_episode(logger.episode_number, main_cnf.save_model)
             # +1 to account for 0 indexing. +0 on ep_timesteps
             # since it will increment +1 even if done=True
             if main_cnf.verbose:
@@ -244,14 +250,6 @@ def training_loop(
                 log_tensor_stats(torch.cat([p.flatten() for p in con.critic.parameters(
                 )]).detach(), "agent/critic/weights", logger.writer, t)
                 
-#             if main_cnf.save_model:
-#                 sub_agent_algo.save(f"{results_dir}/{file_name}_sub")
-#                 meta_agent_algo.save(f"{results_dir}/{file_name}_meta")
-# 
-#             # video evaluation if model is loaded
-#             if main_cnf.load_model != "":
-#                 agent.create_policy_eval_video(
-#                     main_cnf.env_name, seed, results_dir + f"/t_{t+1}")
 
 
 def main(_argv):
