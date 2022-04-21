@@ -33,7 +33,7 @@ def get_config():
 				# Time steps initial random policy is used
 				'start_timesteps': 25e3,
 				# How often (time steps) we evaluate
-				'eval_freq': 5e3,
+				'eval_freq': 1e4,
 				# Max time steps to run environment
 				'max_timesteps': 10e6,
 				# Subgoal dimension
@@ -41,7 +41,7 @@ def get_config():
 				# Save model and optimizer parameters
 				'save_model': True,
 				# Save model every n timesteps
-				'model_save_freq': 1000,
+				'model_save_freq': 5000,
 				# Model timestep to load
 				'load_model': False,
 				# Load Model
