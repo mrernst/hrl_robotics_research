@@ -51,7 +51,7 @@ def get_config():
 			},
 			'agent': {
 				# Agent name (flat or hierarchical)
-				'agent_type': "hiro",
+				'agent_type': "flat",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
 				# sub agent configuration
@@ -122,8 +122,8 @@ def get_config():
 	# add standard parameters for launcher
 	cnf.seed = 0
 	cnf.results_dir = './save'
-	cnf.joblib_n_jobs = 1
-	cnf.joblib_n_seeds = 1
+	cnf.joblib_n_jobs = None
+	cnf.joblib_n_seeds = None
 	
 
 	return cnf

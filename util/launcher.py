@@ -162,21 +162,21 @@ fi
         experiment_args += ' \\'
 
         if self._use_underscore_argparse:
-            result_dir_code = '\t\t--config.results_dir $1'
+            result_dir_code = '\t\t--results_dir $1'
         else:
-            result_dir_code = '\t\t--config.results_dir $1'
+            result_dir_code = '\t\t--results-dir $1'
 
         joblib_code = ''
         if self._joblib_n_jobs is not None:
-            joblib_code = f'\\\n\t\t--config.joblib_n_jobs $3  '
+            joblib_code = f'\\\n\t\t--joblib-n-jobs $3  '
             N_EXPS = self._n_exps
             N_JOBS = self._joblib_n_jobs
             if N_EXPS < N_JOBS:
-                joblib_code += f'--config.joblib_n_seeds $2 \n'
+                joblib_code += f'--joblib-n-seeds $2 \n'
             elif N_EXPS % N_JOBS == 0:
-                joblib_code += f'--config.joblib_n_seeds $3 \n'
+                joblib_code += f'--joblib-n-seeds $3 \n'
             elif N_EXPS % N_JOBS != 0:
-                joblib_code += '--config.joblib_n_seeds ${JOBLIB_SEEDS} \n'
+                joblib_code += '--joblib-n-seeds ${JOBLIB_SEEDS} \n'
             else:
                 raise NotImplementedError
 
@@ -206,7 +206,7 @@ echo "Starting Job $SLURM_JOB_ID, Index $SLURM_ARRAY_TASK_ID"
 # Program specific arguments
 {execution_code}
 {experiment_args}
-\t\t--config.seed $SLURM_ARRAY_TASK_ID \\
+\t\t--seed $SLURM_ARRAY_TASK_ID \\
 {result_dir_code} {joblib_code}
 """
         return code
@@ -269,7 +269,7 @@ echo "Starting Job $SLURM_JOB_ID, Index $SLURM_ARRAY_TASK_ID"
                       str(i) + ', results_dir=' + results_dir + ')')
         else:
             params_dict = get_default_params(experiment)
-
+            
             Parallel(n_jobs=self._joblib_n_jobs)(delayed(experiment)(**params)
                                                  for params in self._generate_exp_params(params_dict))
 
