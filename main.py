@@ -41,7 +41,7 @@ def final_evaluation(main_cnf, timestep, env, agent):
     #agent.load(args.load_episode)
 
     #rewards, success_rate = agent.evaluate_policy(env, main_cnf.eval_episodes, main_cnf.render, main_cnf.save_video, main_cnf.sleep)
-    rewards, success_rate = agent.evaluate_policy(env, 10, True, True, -1)
+    rewards, success_rate = agent.evaluate_policy(env, 10, True, True, timestep, -1)
     
     print('mean:{mean:.2f}, \
             std:{std:.2f}, \
