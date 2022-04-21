@@ -186,9 +186,10 @@ class TD3Controller(object):
                 torch.randn_like(action) * self.policy_noise
             ).clamp(-self.noise_clip, self.noise_clip)
 
-            next_action = (
-                self.actor_target(next_state) + noise
-            ).clamp(-self.max_action, self.max_action)
+            next_action = self.actor_target(next_state) + noise)
+            next_action = torch.min(next_action,  self.actor.max_action)
+            next_action = torch.max(next_action, -self.actor.max_action)
+            #.clamp(-self.max_action, self.max_action)
 
             # Compute the target Q value
             target_Q1, target_Q2 = self.critic_target(next_state, next_action)
