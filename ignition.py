@@ -20,7 +20,7 @@ from ml_collections.config_flags import config_flags
 # ----------------
 def main(_argv):
     print(FLAGS.config)
-    LOCAL = True
+    LOCAL = False
     TEST = False
     USE_CUDA = True
     

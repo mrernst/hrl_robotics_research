@@ -37,7 +37,7 @@ def get_config():
 				# Max time steps to run environment
 				'max_timesteps': 10e6,
 				# Subgoal dimension
-				'subgoal_dim':15,
+				'subgoal_dim': 3, #15 for ant
 				# Save model and optimizer parameters
 				'save_model': True,
 				# Save model every n timesteps
@@ -51,7 +51,7 @@ def get_config():
 			},
 			'agent': {
 				# Agent name (flat or hierarchical)
-				'agent_type': "flat",
+				'agent_type': "hiro",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
 				# sub agent configuration
