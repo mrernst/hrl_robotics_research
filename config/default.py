@@ -122,8 +122,8 @@ def get_config():
 	# add standard parameters for launcher
 	cnf.seed = 0
 	cnf.results_dir = './save'
-	cnf.joblib_n_jobs = None
-	cnf.joblib_n_seeds = None
+	cnf.joblib_n_jobs = 1
+	cnf.joblib_n_seeds = 1
 	
 
 	return cnf
