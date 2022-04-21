@@ -317,7 +317,7 @@ class HighLevelController(TD3Controller):
         discount=0.99,
         policy_freq=2,
         tau=0.005,
-        name='high',
+        name='meta',
     ):
 
         super(HighLevelController, self).__init__(
@@ -429,7 +429,7 @@ class LowLevelController(TD3Controller):
         discount=0.99,
         policy_freq=2,
         tau=0.005,
-        name='low',
+        name='sub',
     ):
 
         super(LowLevelController, self).__init__(
