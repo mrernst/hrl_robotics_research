@@ -186,7 +186,7 @@ class TD3Controller(object):
                 torch.randn_like(action) * self.policy_noise
             ).clamp(-self.noise_clip, self.noise_clip)
 
-            next_action = self.actor_target(next_state) + noise)
+            next_action = self.actor_target(next_state) + noise
             next_action = torch.min(next_action,  self.actor.max_action)
             next_action = torch.max(next_action, -self.actor.max_action)
             #.clamp(-self.max_action, self.max_action)
