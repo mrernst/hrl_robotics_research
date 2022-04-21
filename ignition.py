@@ -21,7 +21,7 @@ from ml_collections.config_flags import config_flags
 def main(_argv):
     print(FLAGS.config)
     LOCAL = False
-    TEST = False
+    TEST = True
     USE_CUDA = True
     
     JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
