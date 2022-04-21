@@ -51,7 +51,7 @@ class Actor(nn.Module):
         self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])
         self.l3 = nn.Linear(hidden_layers[1], action_dim)
 
-        self.max_action = max_action
+        self.max_action = get_tensor(max_action)
 
     def forward(self, state):
         #print(self.max_action)
