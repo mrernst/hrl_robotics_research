@@ -245,9 +245,9 @@ def training_loop(
                     logger.writer.add_scalar(
                         f"agent/{con.name}/{k}", con.curr_train_metrics[k], t)
                 log_tensor_stats(torch.cat([p.flatten() for p in con.actor.parameters(
-                )]).detach(), "agent/{con.name}/actor/weights", logger.writer, t)
+                )]).detach(), f"agent/{con.name}/actor/weights", logger.writer, t)
                 log_tensor_stats(torch.cat([p.flatten() for p in con.critic.parameters(
-                )]).detach(), "agent/{con.name}/critic/weights", logger.writer, t)
+                )]).detach(), f"agent/{con.name}/critic/weights", logger.writer, t)
                 
 
 
