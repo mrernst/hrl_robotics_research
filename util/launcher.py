@@ -164,19 +164,19 @@ fi
         if self._use_underscore_argparse:
             result_dir_code = '\t\t--config.results_dir $1'
         else:
-            result_dir_code = '\t\t--config.results-dir $1'
+            result_dir_code = '\t\t--config.results_dir $1'
 
         joblib_code = ''
         if self._joblib_n_jobs is not None:
-            joblib_code = f'\\\n\t\t--config.joblib-n-jobs $3  '
+            joblib_code = f'\\\n\t\t--config.joblib_n_jobs $3  '
             N_EXPS = self._n_exps
             N_JOBS = self._joblib_n_jobs
             if N_EXPS < N_JOBS:
-                joblib_code += f'--config.joblib-n-seeds $2 \n'
+                joblib_code += f'--config.joblib_n_seeds $2 \n'
             elif N_EXPS % N_JOBS == 0:
-                joblib_code += f'--config.joblib-n-seeds $3 \n'
+                joblib_code += f'--config.joblib_n_seeds $3 \n'
             elif N_EXPS % N_JOBS != 0:
-                joblib_code += '--config.joblib-n-seeds ${JOBLIB_SEEDS} \n'
+                joblib_code += '--config.joblib_n_seeds ${JOBLIB_SEEDS} \n'
             else:
                 raise NotImplementedError
 
