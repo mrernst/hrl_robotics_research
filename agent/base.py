@@ -56,7 +56,7 @@ class Agent(object):
 			from OpenGL import GL
 			#env = gym.wrappers.Monitor(env, directory='video',
 			#						write_upon_reset=True, force=True, resume=True, mode='evaluation')
-			video = imageio.get_writer('video/file.mp4', fps=30)
+			video = imageio.get_writer('video/evaluation.mp4', fps=30)
 			render = False
 	
 		success = 0

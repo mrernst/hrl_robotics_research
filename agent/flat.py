@@ -25,7 +25,7 @@ import base64
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from agent.base import Agent
-from algo.td3 import TD3
+from algo.td3 import TD3Controller
 from util.replay_buffer import ReplayBuffer
 from util.utils import _is_update
 
@@ -43,7 +43,7 @@ class FlatAgent(Agent):
         batch_size,
         start_timesteps):
     
-        self.con = TD3(
+        self.con = TD3Controller(
             state_dim=state_dim,
             goal_dim=goal_dim,
             action_dim=action_dim,

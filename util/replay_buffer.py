@@ -109,9 +109,9 @@ class ReplayBuffer(object):
     def _get_indices(self, size):
         return np.random.randint(0, self.size, size=size)
 
-class LowReplayBuffer(ReplayBuffer):
+class LowLevelReplayBuffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, action_dim, buffer_size, batch_size):
-        super(LowReplayBuffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
+        super(LowLevelReplayBuffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
         self.n_goal = np.zeros((buffer_size, goal_dim))
 
     def append(self, state, goal, action, n_state, n_goal, reward, done):
@@ -139,9 +139,9 @@ class LowReplayBuffer(ReplayBuffer):
             torch.FloatTensor(self.not_done[ind]).to(self.device),
         )
 
-class HighReplayBuffer(ReplayBuffer):
+class HighLevelReplayBuffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, subgoal_dim, action_dim, buffer_size, batch_size, freq):
-        super(HighReplayBuffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
+        super(HighLevelReplayBuffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
         self.action = np.zeros((buffer_size, subgoal_dim))
         self.state_arr = np.zeros((buffer_size, freq, state_dim))
         self.action_arr = np.zeros((buffer_size, freq, action_dim))

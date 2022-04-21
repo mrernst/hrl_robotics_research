@@ -10,7 +10,7 @@ from gym.envs.registration import EnvSpec
 
 
 class GoalWrapper(Wrapper):
-    def __init__(self, env, maze_size_scaling, random_start, low, high, fix_goal=True, top_down=False, test=None):
+    def __init__(self, env, maze_size_scaling, random_start, low, high, fix_goal=False, top_down=False, test=None):
         super(GoalWrapper, self).__init__(env)
         ob_space = env.observation_space
         self.maze_size_scaling = maze_size_scaling
@@ -144,7 +144,7 @@ class GoalWrapper(Wrapper):
 
 
 def create_maze_env(env_name=None, top_down_view=False, maze_size_scaling=4, random_start=True, goal_args=None,
-                    fix_goal=True, test=None):
+                    fix_goal=False, test=None):
     n_bins = 0
     if env_name.startswith('Ego'):
         n_bins = 8

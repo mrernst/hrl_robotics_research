@@ -11,6 +11,7 @@ import argparse
 import os
 import sys
 import time
+import copy
 
 import numpy as np
 import torch
@@ -24,56 +25,75 @@ from util.launcher import get_default_params, run_experiment, \
 from util.replay_buffer import ReplayBuffer
 import algo.td3 as TD3
 from util.logger import MetricLogger, log_tensor_stats
+from util.utils import get_obs_array
 
-from agent.flat import Agent
-from agent.hierarchical import HIRO
+from agent.flat import FlatAgent
+from agent.hierarchical import HiroAgent
 
-import env.mujoco as mujoco_envs
+import env.mujoco as emj
+
+
 # custom functions
 # -----
+
+def final_evaluation(main_cnf, timestep, env, agent):
+    # load agent from file...
+    #agent.load(args.load_episode)
+
+    #rewards, success_rate = agent.evaluate_policy(env, main_cnf.eval_episodes, main_cnf.render, main_cnf.save_video, main_cnf.sleep)
+    rewards, success_rate = agent.evaluate_policy(env, 10, True, True, -1)
+    
+    print('mean:{mean:.2f}, \
+            std:{std:.2f}, \
+            median:{median:.2f}, \
+            success:{success:.2f}'.format(
+                mean=np.mean(rewards), 
+                std=np.std(rewards), 
+                median=np.median(rewards), 
+                success=success_rate))
+
+def evaluate(timestep, env, agent):
+    rewards, success_rate = agent.evaluate_policy(env)
+    #self.logger.write('Success Rate', success_rate, e)
+    
+    print(" " * 80 + "\r" + "---------------------------------------")
+    print('Total T: {timestep}, Reward - mean: {mean:.2f}, std: {std:.2f}, median: {median:.2f}, success:{success:.2f}'.format(
+        timestep=timestep+1, 
+        mean=np.mean(rewards), 
+        std=np.std(rewards), 
+        median=np.median(rewards), 
+        success=success_rate))
+    print("---------------------------------------")
+    
+    return np.mean(rewards)
+
 
 def experiment(main, agent, seed, results_dir, **kwargs):
     """
     wrapper function to translate variable names and to catch
     unneeded additional joblib variables in local execution
     """
-    training_loop(
-        main_cnf = main,
-        agent_cnf = agent,
-        seed = seed,
-        results_dir = results_dir
-    )
-    # space for post experiment analysis
-    pass
-
-
-def training_loop(
-    main_cnf,  # main experiment configuration
-    agent_cnf,  # agent configuration
-    seed=0,  # This argument is mandatory
-    results_dir='./save'  # This argument is mandatory
-):
-    """
-    main experiment loop for training the RL Agent
-    """
-
-    # Create results directory
+    main_cnf = main
+    agent_cnf = agent
+    results_dir = str(results_dir).replace('\n ', '/').replace(': ','_')
+    # create filename and results directory
     os.makedirs(results_dir, exist_ok=True)
-    # Save arguments
+    # save arguments
     # TODO make this work with nested dicts
     #save_args(results_dir, locals(), git_repo_path='./')
-
+    
     file_name = f"{agent_cnf.algorithm_name}_{main_cnf.env_name}_{seed}"
-
+    
     print("---------------------------------------")
     print(
         f"Policy: {agent_cnf.algorithm_name}, Env: {main_cnf.env_name}, Seed: {seed}")
     print("---------------------------------------")
-
-    # Create world
-    env = gym.make(main_cnf.env_name)
     
-    # Set seeds
+    # create world
+    env = gym.make(main_cnf.env_name)
+    #EnvWithGoal(create_maze_env(main_cnf.env_name), main_cnf.env_name)
+    
+    # set seeds
     env.seed(seed)
     env.action_space.seed(seed)
     torch.manual_seed(seed)
@@ -81,102 +101,115 @@ def training_loop(
     
     results_dir = os.path.join(results_dir, str(seed))
     
-
+    # environment parameters
+    state_dim =  env.observation_space['observation'].shape[0]
+    action_dim =  env.action_space.shape[0]
+    max_action =  torch.Tensor(env.action_space.high * np.ones(action_dim))
+    goal_dim = env.observation_space['desired_goal'].shape[0]
     
-    
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    max_action = float(env.action_space.high[0])
-    
-    # initialize_agent(agent_class, )
-    
-    # Initialize RL algorithm (outsource into a function)
-    kwargs = {
-        "state_dim": state_dim,
-        "action_dim": action_dim,
-        "max_action": max_action,
-        "discount": agent_cnf.sub.discount,
-        "tau": agent_cnf.sub.tau,
-    }
-
-    if agent_cnf.algorithm_name == "TD3":
-        # Target policy smoothing is scaled wrt the action scale
-        kwargs["policy_noise"] = agent_cnf.sub.policy_noise * max_action
-        kwargs["noise_clip"] = agent_cnf.sub.noise_clip * max_action
-        kwargs["policy_freq"] = agent_cnf.sub.policy_freq
-        kwargs["actor_lr"] = agent_cnf.sub.actor_lr
-        kwargs["critic_lr"] = agent_cnf.sub.critic_lr
-
-        algorithm = TD3.TD3(**kwargs, name='sub')
+    # spawn agents
+    if agent_cnf.agent_type == 'flat':
+        agent = FlatAgent(
+            state_dim=state_dim,
+            action_dim=action_dim,
+            goal_dim=goal_dim,
+            max_action=max_action,
+            model_save_freq=main_cnf.model_save_freq,
+            model_path=f'{results_dir}/{file_name}',
+            buffer_size=agent_cnf.sub.buffer_size,
+            batch_size=agent_cnf.sub.batch_size,
+            start_timesteps=main_cnf.start_timesteps
+            )
+    elif agent_cnf.agent_type == 'hiro':
+        agent = HiroAgent(
+            state_dim=state_dim,
+            action_dim=action_dim,
+            goal_dim=goal_dim,
+            subgoal_dim=main_cnf.subgoal_dim,
+            max_action_low=max_action,
+            start_timesteps=main_cnf.start_timesteps,
+            model_path=f'{results_dir}/{file_name}',
+            model_save_freq=main_cnf.model_save_freq,
+            buffer_size_high=agent_cnf.meta.buffer_size,
+            buffer_size_low=agent_cnf.sub.buffer_size,
+            batch_size_high=agent_cnf.meta.batch_size,
+            batch_size_low=agent_cnf.sub.batch_size,
+            buffer_freq=agent_cnf.meta.buffer_freq,
+            train_freq=agent_cnf.meta.train_freq,
+            reward_scaling=agent_cnf.meta.reward_scaling,
+            policy_freq_high=agent_cnf.meta.policy_freq,
+            policy_freq_low=agent_cnf.sub.policy_freq,
+            )
     else:
-        raise NotImplementedError()
+        raise NotImplementedError('Choose between flat and hierarchical (hiro) agent')
+    
+    
+    if main_cnf.train:
+        training_loop(
+            main_cnf = main_cnf,
+            agent_cnf = agent_cnf,
+            env = env,
+            agent = agent,
+            seed = seed,
+            results_dir = results_dir
+        )
+    if main_cnf.evaluate:
+        final_evaluation(main_cnf, main_cnf.max_timesteps, env, agent)
+    
+     
+    # space for post experiment analysis
+    
+    pass
 
-    if main_cnf.load_model != "":
-        model_file = file_name if main_cnf.load_model == "default" else main_cnf.load_model
-        policy.load(f"{results_dir}/{model_file}")
 
-
-    # choose replay buffer
-    replay_buffer = ReplayBuffer(state_dim, action_dim, sequence_dim=1, offpolicy=False)
-
-    # Initialize agent with algorithm
-    agent = Agent(action_dim, algorithm, replay_buffer,
-                  burnin=main_cnf.start_timesteps)
-    
-    
-    # Evaluate untrained policy
-    agent.eval_policy(main_cnf.env_name, seed)
-    # delete: evaluations = [eval_policy(policy, main_cnf.env_name, seed)]
-    
-    
-    
-    
-    # Main training loop
-    # -----
+def training_loop(
+    main_cnf,  # main experiment configuration
+    agent_cnf,  # agent configuration
+    env, # environment
+    agent, # agent to act
+    seed=0,  # This argument is mandatory
+    results_dir='./save'  # This argument is mandatory
+):   
+    """
+    main experiment loop for training the RL Agent
+    """
 
     # reset environment
-    state, done = env.reset(), False
-    # state = np.concatenate([state[k] for k in state.keys()])
+    obs, done = env.reset(), False
+    fg = obs['desired_goal']
+    s = obs['observation']
+    agent.set_final_goal(fg)    
+
 
     # start logging of parameters
     logger = MetricLogger(results_dir)
 
     # training loop
     for t in range(int(main_cnf.max_timesteps)):
-
-        # 3. Render environment [WIP]
-        # env.render()
-
-        # 4. Run agent on the state (get the action)
-        if t < main_cnf.start_timesteps:
-            action = env.action_space.sample()
-        else:
-            action = agent.select_action(
-                state, max_action, agent_cnf.sub.expl_noise)
-
-        # 5. Agent performs action
-        next_state, reward, done, _ = env.step(action)
-        # next_state = np.concatenate([next_state[k] for k in next_state.keys()])
-
+        
+        # Choose and take action
+        a, r, n_s, done = agent.step(s, env, logger.curr_ep_steps , t, explore=True)
+        
         done_bool = float(
             done) if logger.curr_ep_steps < env._max_episode_steps else 0
 
-        # 6. Remember
-        # Store data in replay buffer
-        agent.add_to_memory(state, action, next_state, reward, done_bool)
+        # remember (store in buffer)
+        agent.append(logger.curr_ep_steps, s, a, n_s, r, done)
+        
+        # train
+        metrics = agent.train(t)
+        
+        # logging / updating metrics
+        logger.log_step(r, None, None)
+        
+        # update state
+        s = n_s
+        agent.end_step()
 
-        # 9. Update state
-        state = next_state
 
-        # 8. Logging / updating metrics
-        logger.log_step(reward, None, None)
-
-        # 7. Learn
-        # Train agent after collecting sufficient data
-        if t >= main_cnf.start_timesteps:
-            agent.learn(agent_cnf.sub.batch_size)
-
+        # episode is done
         if done:
+            agent.end_episode(logger.episode_number)
             # +1 to account for 0 indexing. +0 on ep_timesteps
             # since it will increment +1 even if done=True
             if main_cnf.verbose:
@@ -184,44 +217,40 @@ def training_loop(
                       f"Total T: {t+1} Episode Num: {logger.episode_number+1} \
                     Episode T: {logger.curr_ep_steps} Reward: {logger.curr_ep_reward:.3f}",
                       end="\r")
+            
 
             # Reset environment
-            state, done = env.reset(), False
-            # state = np.concatenate([state[k] for k in state.keys()])
-
-            # 10. Episode based metrics, automatically resets episode timesteps
+            obs, done = env.reset(), False
+            fg = obs['desired_goal']
+            s = obs['observation']
+            agent.set_final_goal(fg) 
+            
+            # episode based metrics, automatically resets episode timesteps
             logger.log_episode()
 
         # Evaluate episode
         if (t + 1) % main_cnf.eval_freq == 0:
-            eval_episodes = 10
-            avg_reward = agent.eval_policy(
-                main_cnf.env_name, seed, eval_episodes)
-            if main_cnf.verbose:
-                print(" " * 80 + "\r" + "---------------------------------------")
-                print(
-                    f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}")
-                print("---------------------------------------")
-
+            mean_eval_reward = evaluate(t, env, agent)
             # log results
             logger.write_to_tensorboard(t)
             logger.writer.add_scalar(
-                'training/eval_reward', agent.evaluations[-1], t)
-            for k in agent.algorithm.curr_train_metrics.keys():
+                'training/eval_reward', mean_eval_reward, t)
+            for k in agent.con.curr_train_metrics.keys():
                 logger.writer.add_scalar(
-                    f"agent/{k}", agent.algorithm.curr_train_metrics[k], t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.algorithm.actor.parameters(
+                    f"agent/{k}", agent.con.curr_train_metrics[k], t)
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.con.actor.parameters(
             )]).detach(), "agent/actor/weights", logger.writer, t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.algorithm.critic.parameters(
+            log_tensor_stats(torch.cat([p.flatten() for p in agent.con.critic.parameters(
             )]).detach(), "agent/critic/weights", logger.writer, t)
-
-            if main_cnf.save_model:
-                policy.save(f"{results_dir}/{file_name}")
-
-            # video evaluation if model is loaded
-            if main_cnf.load_model != "":
-                agent.create_policy_eval_video(
-                    main_cnf.env_name, seed, results_dir + f"/t_{t+1}")
+            
+#             if main_cnf.save_model:
+#                 sub_agent_algo.save(f"{results_dir}/{file_name}_sub")
+#                 meta_agent_algo.save(f"{results_dir}/{file_name}_meta")
+# 
+#             # video evaluation if model is loaded
+#             if main_cnf.load_model != "":
+#                 agent.create_policy_eval_video(
+#                     main_cnf.env_name, seed, results_dir + f"/t_{t+1}")
 
 
 def main(_argv):

@@ -58,13 +58,13 @@ def main(_argv):
         # add experiments directly to the config
         # b/c joblib passes arguments to experiment
         if LOCAL:
-            FLAGS.config.agent.actor_lr = ac_lr
-            FLAGS.config.agent.critic_lr = cr_lr
+            FLAGS.config.agent.sub.actor_lr = ac_lr
+            FLAGS.config.agent.sub.critic_lr = cr_lr
             launcher.add_experiment(**FLAGS.config)
         else:
             launcher.add_experiment(**{
-                'config.agent.actor_lr': ac_lr,
-                'config.agent.critic_lr': cr_lr
+                'config.agent.sub.actor_lr': ac_lr,
+                'config.agent.sub.critic_lr': cr_lr
             })
 
     

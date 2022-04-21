@@ -25,7 +25,7 @@ def get_config():
 		{
 			'main': {
 				# OpenAI gym environment name
-				'env_name': "AntMaze",
+				'env_name': "PointMaze",
 				# General Training parameter
 				'train': True,
 				# General Evaluation parameter
@@ -36,6 +36,8 @@ def get_config():
 				'eval_freq': 5e3,
 				# Max time steps to run environment
 				'max_timesteps': 1e6,
+				# Subgoal dimension
+				'subgoal_dim':15,
 				# Save model and optimizer parameters
 				'save_model': False,
 				# Save model every n timesteps
@@ -47,7 +49,7 @@ def get_config():
 			},
 			'agent': {
 				# Agent name (flat or hierarchical)
-				'agent_name': "flat",
+				'agent_type': "flat",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
 				# sub agent configuration
@@ -103,6 +105,12 @@ def get_config():
 					'actor_hidden_layers': [256, 256],
 					# Hidden layer size of the critic
 					'critic_hidden_layers': [256, 256],
+					# Buffer frequency
+					'buffer_freq': 10,
+					# Train frequency
+					'train_freq': 10,
+					# Reward scaling
+					'reward_scaling': 0.1,
 				}
 			},
 		}
