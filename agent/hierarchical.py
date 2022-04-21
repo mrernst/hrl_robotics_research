@@ -73,6 +73,8 @@ class HiroAgent(Agent):
             model_path=model_path,
             policy_freq=policy_freq_low
             )
+        
+        self.controllers = [self.low_con, self.high_con]
     
         self.replay_buffer_low = LowLevelReplayBuffer(
             state_dim=state_dim,

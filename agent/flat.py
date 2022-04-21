@@ -50,6 +50,7 @@ class FlatAgent(Agent):
             max_action=max_action,
             model_path=model_path
             )
+        self.controllers = [self.con]
     
         self.replay_buffer = ReplayBuffer(
             state_dim=state_dim,

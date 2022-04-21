@@ -15,6 +15,7 @@ import copy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -27,6 +28,13 @@ def init_weights(m):
         torch.nn.init.xavier_uniform(m.weight)
         m.bias.data.fill_(0.01)
 
+
+def get_tensor(z):
+    if len(z.shape) == 1:
+        return torch.FloatTensor(z).unsqueeze(0).to(device)
+    else:
+        return torch.FloatTensor(z).to(device)
+        
 # net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
 # net.apply(init_weights)
 
@@ -134,8 +142,8 @@ class TD3Controller(object):
         self.total_it = 0
 
     def policy(self, state, goal, to_numpy=True):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        goal = torch.FloatTensor(goal.reshape(1, -1)).to(device)
+        state = get_tensor(state)
+        goal = get_tensor(goal)
         action = self.actor(torch.cat([state, goal], 1))
 
         if to_numpy:
@@ -144,8 +152,8 @@ class TD3Controller(object):
         return action.squeeze()
 
     def policy_with_noise(self, state, goal, to_numpy=True):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        goal = torch.FloatTensor(goal.reshape(1, -1)).to(device)
+        state = get_tensor(state)
+        goal = get_tensor(goal)
         action = self.actor(torch.cat([state, goal], 1))
 
         action = action + self._sample_exploration_noise(action)
@@ -234,8 +242,12 @@ class TD3Controller(object):
                 self.critic_target, self.critic, self.tau)
             self._update_target_network(
                 self.actor_target, self.actor, self.tau)
+                
+            return {'actor_loss_'+self.name: actor_loss, 'critic_loss_'+self.name: critic_loss}, \
+            {'td_error_'+self.name: td_error}
 
-        return self.curr_train_metrics
+        return {'critic_loss_'+self.name: critic_loss}, \
+            {'td_error_'+self.name: td_error}
 
     def train(self, replay_buffer):
         state, goal, action, next_state, reward, not_done = replay_buffer.sample()
@@ -418,8 +430,8 @@ class LowLevelController(TD3Controller):
         )
 
     def train(self, replay_buffer):
-        if not self._initialized:
-            self._initialize_target_networks()
+        # if not self._initialized:
+        #     self._initialize_target_networks()
 
         states, sgoals, actions, n_states, n_sgoals, rewards, not_done = replay_buffer.sample()
 

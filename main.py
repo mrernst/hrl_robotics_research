@@ -235,14 +235,15 @@ def training_loop(
             logger.write_to_tensorboard(t)
             logger.writer.add_scalar(
                 'training/eval_reward', mean_eval_reward, t)
-            for k in agent.con.curr_train_metrics.keys():
-                logger.writer.add_scalar(
-                    f"agent/{k}", agent.con.curr_train_metrics[k], t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.con.actor.parameters(
-            )]).detach(), "agent/actor/weights", logger.writer, t)
-            log_tensor_stats(torch.cat([p.flatten() for p in agent.con.critic.parameters(
-            )]).detach(), "agent/critic/weights", logger.writer, t)
-            
+            for con in agent.controllers:
+                for k in con.curr_train_metrics.keys():
+                    logger.writer.add_scalar(
+                        f"agent/{k}", con.curr_train_metrics[k], t)
+                log_tensor_stats(torch.cat([p.flatten() for p in con.actor.parameters(
+                )]).detach(), "agent/actor/weights", logger.writer, t)
+                log_tensor_stats(torch.cat([p.flatten() for p in con.critic.parameters(
+                )]).detach(), "agent/critic/weights", logger.writer, t)
+                
 #             if main_cnf.save_model:
 #                 sub_agent_algo.save(f"{results_dir}/{file_name}_sub")
 #                 meta_agent_algo.save(f"{results_dir}/{file_name}_meta")
