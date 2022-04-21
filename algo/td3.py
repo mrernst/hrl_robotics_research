@@ -158,8 +158,8 @@ class TD3Controller(object):
         action = self.actor(torch.cat([state, goal], 1))
 
         action = action + self._sample_exploration_noise(action)
-        action = torch.min(action,  self.max_action)
-        action = torch.max(action, -self.max_action)
+        action = torch.min(action,  self.actor.max_action)
+        action = torch.max(action, -self.actor.max_action)
 
         if to_numpy:
             return action.cpu().data.numpy().squeeze()
