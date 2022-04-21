@@ -435,7 +435,7 @@ class LowLevelController(TD3Controller):
         super(LowLevelController, self).__init__(
             state_dim, goal_dim, action_dim, max_action, model_path,
             actor_lr, critic_lr, actor_hidden_layers, critic_hidden_layers, expl_noise, policy_noise,
-            noise_clip, discount, policy_freq, tau
+            noise_clip, discount, policy_freq, tau, name
         )
 
     def train(self, replay_buffer):
