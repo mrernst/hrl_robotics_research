@@ -176,8 +176,8 @@ class TD3Controller(object):
         self.total_it += 1
 
         # check_
-        state = torch.cat([state, goal], 1)
-        next_state = torch.cat([next_state, goal], 1)
+        state = torch.cat([state, goal], 1).to(device)
+        next_state = torch.cat([next_state, goal], 1).to(device)
         # This is probably not correct!!
 
         with torch.no_grad():
