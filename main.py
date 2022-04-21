@@ -30,9 +30,6 @@ from util.utils import get_obs_array
 from agent.flat import FlatAgent
 from agent.hierarchical import HiroAgent
 
-import env.mujoco as emj
-
-
 # custom functions
 # -----
 
@@ -88,7 +85,9 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     print("---------------------------------------")
     
     # create world
+    import env.mujoco as emj
     env = gym.make(main_cnf.env_name)
+
     #EnvWithGoal(create_maze_env(main_cnf.env_name), main_cnf.env_name)
     
     # set seeds
