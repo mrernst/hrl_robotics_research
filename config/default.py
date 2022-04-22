@@ -25,7 +25,7 @@ def get_config():
 		{
 			'main': {
 				# OpenAI gym environment name
-				'env_name': "PointMaze-v1",
+				'env_name': "AntMaze-v2",
 				# General Training parameter
 				'train': True,
 				# General Evaluation parameter
@@ -37,7 +37,7 @@ def get_config():
 				# Max time steps to run environment
 				'max_timesteps': 10e6,
 				# Subgoal dimension
-				'subgoal_dim': 3, #15 for ant
+				'subgoal_dim': 15, #3 for ant
 				# Save model and optimizer parameters
 				'save_model': True,
 				# Save model every n episodes
