@@ -468,13 +468,15 @@ class MazeEnv(gym.Env):
                 if 'name' not in geom.attrib:
                     raise Exception("Every geom of the torso must have a name "
                                     "defined")
-            _, file_path = tempfile.mkstemp(text=True, suffix='.xml')
+            fd, file_path = tempfile.mkstemp(text=True, suffix='.xml')
             self.tree.write(
                 file_path)  # here we write a temporal file with the robot specifications. Why not the original one??
 
             model_cls = self.__class__.MODEL_CLASS
             self.wrapped_env = model_cls(*self.args, file_path=file_path,
                                          **self.kwargs)  # file to the robot specifications; model_cls is AntEnv
+            
+            os.close(fd)
 
         self.t = 0
         self.trajectory = []
