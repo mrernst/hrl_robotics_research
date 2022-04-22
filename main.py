@@ -60,7 +60,7 @@ def evaluate(timestep, env, agent):
         success=success_rate))
     print("---------------------------------------")
     
-    return np.mean(rewards)
+    return np.mean(rewards), success_rate
 
 
 def experiment(main, agent, seed, results_dir, **kwargs):
@@ -235,9 +235,12 @@ def training_loop(
 
         # Evaluate episode
         if (t + 1) % main_cnf.eval_freq == 0:
-            mean_eval_reward = evaluate(t, env, agent)
+            mean_eval_reward, success_rate = evaluate(t, env, agent)
+            
             # log results
             logger.write_to_tensorboard(t)
+            logger.writer.add_scalar(
+            'training/success_rate', success_rate, t)
             logger.writer.add_scalar(
                 'training/eval_reward', mean_eval_reward, t)
             for con in agent.controllers:
