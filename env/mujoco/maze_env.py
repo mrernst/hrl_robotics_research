@@ -475,7 +475,6 @@ class MazeEnv(gym.Env):
             model_cls = self.__class__.MODEL_CLASS
             self.wrapped_env = model_cls(*self.args, file_path=file_path,
                                          **self.kwargs)  # file to the robot specifications; model_cls is AntEnv
-            
             os.close(fd)
 
         self.t = 0
