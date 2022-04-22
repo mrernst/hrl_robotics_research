@@ -40,11 +40,11 @@ def get_config():
 				'subgoal_dim': 3, #15 for ant
 				# Save model and optimizer parameters
 				'save_model': True,
-				# Save model every n timesteps
+				# Save model every n episodes
 				'model_save_freq': 5000,
-				# Model timestep to load
+				# Load model from file
 				'load_model': False,
-				# Load Model
+				# Which episode save should be loaded (-1 == last avail.)
 				'load_episode': -1,
 				# Print information to CLI
 				'verbose': False,
