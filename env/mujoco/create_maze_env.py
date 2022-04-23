@@ -103,7 +103,7 @@ class GoalWrapper(Wrapper):
         if self.reward_type == "sparse":
             reward = -(distance > self.distance_threshold).astype(np.float32)
         else:
-            # normlization
+            # normalization
             reward = -distance * 0.1
         if self.top_down:
             mask = np.array([0.0] * 2 + [1.0] * (out['observation'].shape[0] - 2))
