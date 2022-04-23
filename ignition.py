@@ -75,7 +75,7 @@ def main(_argv):
         else:
             launcher.add_experiment(**{
                 'config.agent.agent_type': at,
-                'config.env_name': 'PandaReach-v2'
+                'config.main.env_name': 'PandaReach-v2'
             })
     
     launcher.run(LOCAL, TEST)
