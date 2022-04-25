@@ -10,6 +10,10 @@
 import torch
 import numpy as np
 
+import gym
+from gym import Wrapper
+from collections import OrderedDict
+
 # utilities
 # -----
 # from util import *
@@ -50,6 +54,34 @@ def get_obs_array(state, combined=False):
         pass
     
     return state
+
+
+class MakeGoalBased(Wrapper):
+    def __init__(self, env):
+        super(MakeGoalBased, self).__init__(env)
+        ob_space = env.observation_space
+        self.goal_space = gym.spaces.Box(low=np.array([0,0]), high=np.array([1,1]))
+        self.observation_space = gym.spaces.Dict(OrderedDict({
+            'observation': ob_space,
+            'desired_goal': self.goal_space,
+            'achieved_goal': self.goal_space,
+        }))
+        self._max_episode_steps = self.env._max_episode_steps
+    def step(self, action):
+        #print(action, action.shape)
+        observation, reward, done, info = self.env.step(action)
+        out = {'observation': observation,
+               'desired_goal': np.array([0,0]),
+               'achieved_goal': np.array([0,0])}
+        return out, reward, done, info
+    
+    def reset(self):
+        observation = self.env.reset()
+    
+        out = {'observation': observation,
+               'desired_goal': np.array([0,0]),
+               'achieved_goal': np.array([0,0])}
+        return out
 
 
 # custom classes
