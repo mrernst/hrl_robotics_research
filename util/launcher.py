@@ -31,7 +31,7 @@ class Launcher(object):
 
     def __init__(self, exp_name, python_file, n_exps, n_cores=1, memory=2000,
                  days=0, hours=24, minutes=0, seconds=0,
-                 project_name=None, base_dir=None, joblib_n_jobs=None, conda_env=None, gres=None, partition=None, begin=None,
+                 project_name=None, base_dir=None, joblib_n_jobs=None, conda_env=None, reservation=None, gres=None, partition=None, begin=None,
                  use_timestamp=False, use_underscore_argparse=False, max_seeds=10000):
         """
         Constructor.
@@ -51,6 +51,7 @@ class Launcher(object):
             base_dir (str): path to directory to save the results (in hhlr results are saved to /work/scratch/$USER)
             joblib_n_jobs (int or None): number of parallel jobs in Joblib
             conda_env (str): name of the conda environment to run the experiments in
+            reservation (str): slurm reservation e.g. triesch-shared
             gres (str): request cluster resources. E.g. to add a GPU in the IAS cluster specify gres='gpu:rtx2080:1'
             partition (str): the partition to use in case of slurm execution. If None, no partition is specified.
             begin (str): start the slurm experiment at a given time (see --begin in slurm docs)
@@ -70,6 +71,7 @@ class Launcher(object):
                 0), "joblib_n_jobs must be None or > 0"
         self._joblib_n_jobs = joblib_n_jobs
         self._conda_env = conda_env
+        self._reservation = reservation
         self._gres = gres
         self._partition = partition
         self._begin = begin
@@ -126,6 +128,9 @@ class Launcher(object):
         if self._gres:
             print(self._gres)
             gres_option += '#SBATCH --gres=' + str(self._gres) + '\n'
+        if self._reservation:
+            print(self._reservation)
+            gres_option += '#SBATCH --reservation=' + str(self._reservation) + '\n'
 
         joblib_seed = ''
         if self._joblib_n_jobs is not None:

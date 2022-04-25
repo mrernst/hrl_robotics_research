@@ -41,7 +41,9 @@ def main(_argv):
                         seconds=0,
                         partition='sleuths',
                         # conda_env='base',
-                        gres='gpu:rtx2070super:1' if USE_CUDA else None,
+                        reservation='triesch-shared',
+                        gres='gpu:rtx2080ti:1' if USE_CUDA else None,
+                        # gres='gpu:rtx2070super:1' if USE_CUDA else None,
                         use_timestamp=True,
                         use_underscore_argparse=True
                         )
