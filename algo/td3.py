@@ -132,11 +132,12 @@ class TD3Controller(object):
         # parameters
         self.max_action = max_action
         self.discount = discount
-        self.expl_noise = expl_noise
+        self.tau = tau
         self.policy_noise = policy_noise
         self.noise_clip = noise_clip
         self.policy_freq = policy_freq
-        self.tau = tau
+        
+        self.expl_noise = expl_noise
         self.name = name
 
         self.curr_train_metrics = {}
@@ -146,11 +147,10 @@ class TD3Controller(object):
         state = get_tensor(state)
         goal = get_tensor(goal)
         action = self.actor(torch.cat([state, goal], 1))
-
         if to_numpy:
-            return action.cpu().data.numpy().squeeze()
+            return action.cpu().data.numpy().flatten()
 
-        return action.squeeze()
+        return action.flatten()
 
     def policy_with_noise(self, state, goal, to_numpy=True):
         state = get_tensor(state)
@@ -162,23 +162,22 @@ class TD3Controller(object):
         action = torch.max(action, -self.actor.max_action)
 
         if to_numpy:
-            return action.cpu().data.numpy().squeeze()
+            return action.cpu().data.numpy().flatten()
 
-        return action.squeeze()
+        return action.flatten()
 
     def _sample_exploration_noise(self, actions):
         mean = torch.zeros(actions.size()).to(device)
         var = torch.ones(actions.size()).to(device)
         #expl_noise = self.expl_noise - (self.expl_noise/1200) * (self.total_it//10000)
-        return torch.normal(mean, self.expl_noise*var)
+        return torch.normal(mean, self.max_action*self.expl_noise*var)
 
     def _train(self, state, goal, action, reward, next_state, next_goal, not_done):
         self.total_it += 1
 
-        # check_
+        # check_??
         state = torch.cat([state, goal], 1).to(device)
-        next_state = torch.cat([next_state, goal], 1).to(device)
-        # This is probably not correct!!
+        next_state = torch.cat([next_state, next_goal], 1).to(device)
 
         with torch.no_grad():
             # Select action according to policy and add clipped noise
@@ -186,10 +185,10 @@ class TD3Controller(object):
                 torch.randn_like(action) * self.policy_noise
             ).clamp(-self.noise_clip, self.noise_clip)
 
-            next_action = self.actor_target(next_state) + noise
-            next_action = torch.min(next_action,  self.actor.max_action)
-            next_action = torch.max(next_action, -self.actor.max_action)
-            #.clamp(-self.max_action, self.max_action)
+            next_action = (
+                self.actor_target(next_state) + noise
+            ).clamp(-self.actor.max_action, self.actor.max_action)
+            
 
             # Compute the target Q value
             target_Q1, target_Q2 = self.critic_target(next_state, next_action)
@@ -200,8 +199,8 @@ class TD3Controller(object):
         current_Q1, current_Q2 = self.critic(state, action)
 
         # Compute critic loss
-        critic_loss = F.smooth_l1_loss(current_Q1, target_Q) + \
-            F.smooth_l1_loss(current_Q2, target_Q)
+        critic_loss = F.mse_loss(current_Q1, target_Q) + \
+            F.mse_loss(current_Q2, target_Q)
 
         # Optimize the critic
         self.critic_optimizer.zero_grad()
@@ -256,7 +255,7 @@ class TD3Controller(object):
         return self._train(state, goal, action, reward, next_state, goal, not_done)
 
     def _update_target_network(self, target, origin, tau):
-        for origin_param, target_param in zip(target.parameters(), origin.parameters()):
+        for origin_param, target_param in zip(origin.parameters(), target.parameters()):
             target_param.data.copy_(
                 tau * origin_param.data + (1.0 - tau) * target_param.data)
 
