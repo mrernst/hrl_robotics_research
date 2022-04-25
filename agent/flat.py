@@ -41,14 +41,18 @@ class FlatAgent(Agent):
         model_save_freq,
         buffer_size,
         batch_size,
-        start_timesteps):
+        start_timesteps,
+        policy_noise,
+        noise_clip):
     
         self.con = TD3Controller(
             state_dim=state_dim,
             goal_dim=goal_dim,
             action_dim=action_dim,
             max_action=max_action,
-            model_path=model_path
+            model_path=model_path,
+            policy_noise=policy_noise,
+            noise_clip=noise_clip,
             )
         self.controllers = [self.con]
     
@@ -80,7 +84,8 @@ class FlatAgent(Agent):
         self.replay_buffer.append(s, self.fg, a, n_s, r, d)
     
     def train(self, global_step):
-        return self.con.train(self.replay_buffer)
+        if global_step >= self.start_timesteps:
+            return self.con.train(self.replay_buffer)
     
     def _choose_action(self, s):
         return self.con.policy(s, self.fg)

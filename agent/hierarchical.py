@@ -50,7 +50,11 @@ class HiroAgent(Agent):
         train_freq,
         reward_scaling,
         policy_freq_high,
-        policy_freq_low):
+        policy_freq_low,
+        policy_noise_high,
+        policy_noise_low,
+        noise_clip_high,
+        noise_clip_low):
     
         self.subgoal = Subgoal(subgoal_dim)
         max_action_high = torch.Tensor(self.subgoal.action_space.high * np.ones(subgoal_dim))
@@ -62,7 +66,9 @@ class HiroAgent(Agent):
             action_dim=subgoal_dim,
             max_action=max_action_high,
             model_path=model_path,
-            policy_freq=policy_freq_high
+            policy_freq=policy_freq_high,
+            policy_noise=policy_noise_high,
+            noise_clip=noise_clip_high,
             )
     
         self.low_con = LowLevelController(
@@ -71,7 +77,9 @@ class HiroAgent(Agent):
             action_dim=action_dim,
             max_action=max_action_low,
             model_path=model_path,
-            policy_freq=policy_freq_low
+            policy_freq=policy_freq_low,
+            policy_noise=policy_noise_low,
+            noise_clip=noise_clip_low,
             )
         
         self.controllers = [self.low_con, self.high_con]
