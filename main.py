@@ -26,6 +26,7 @@ from util.replay_buffer import ReplayBuffer
 import algo.td3 as TD3
 from util.logger import MetricLogger, log_tensor_stats
 from util.utils import get_obs_array
+from util.utils import MakeGoalBased
 
 from agent.flat import FlatAgent
 from agent.hierarchical import HiroAgent
@@ -86,7 +87,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     
     # create world
     import env.mujoco as emj
-    env = gym.make(main_cnf.env_name)
+    env = MakeGoalBased(gym.make(main_cnf.env_name))
 
     #EnvWithGoal(create_maze_env(main_cnf.env_name), main_cnf.env_name)
     
@@ -100,9 +101,9 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     
     # environment parameters
     state_dim =  env.observation_space['observation'].shape[0]
+    goal_dim = env.observation_space['desired_goal'].shape[0]
     action_dim =  env.action_space.shape[0]
     max_action =  torch.Tensor(env.action_space.high * np.ones(action_dim))
-    goal_dim = env.observation_space['desired_goal'].shape[0]
     
     # spawn agents
     if agent_cnf.agent_type == 'flat':
@@ -115,7 +116,9 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             model_path=f'{results_dir}/{file_name}',
             buffer_size=agent_cnf.sub.buffer_size,
             batch_size=agent_cnf.sub.batch_size,
-            start_timesteps=main_cnf.start_timesteps
+            start_timesteps=main_cnf.start_timesteps,
+            policy_noise=agent_cnf.sub.policy_noise * float(env.action_space.high[0]),
+            noise_clip=agent_cnf.sub.noise_clip * float(env.action_space.high[0]),
             )
     elif agent_cnf.agent_type == 'hiro':
         agent = HiroAgent(
@@ -136,6 +139,10 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             reward_scaling=agent_cnf.meta.reward_scaling,
             policy_freq_high=agent_cnf.meta.policy_freq,
             policy_freq_low=agent_cnf.sub.policy_freq,
+            policy_noise_high=agent_cnf.meta.policy_noise,
+            policy_noise_low=agent_cnf.sub.policy_noise,
+            noise_clip_high=agent_cnf.meta.noise_clip,
+            noise_clip_low=agent_cnf.sub.noise_clip,
             )
     else:
         raise NotImplementedError('Choose between flat and hierarchical (hiro) agent')
