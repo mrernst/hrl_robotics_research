@@ -148,9 +148,9 @@ class TD3Controller(object):
         goal = get_tensor(goal)
         action = self.actor(torch.cat([state, goal], 1))
         if to_numpy:
-            return action.cpu().data.numpy().flatten()
+            return action.cpu().data.numpy().squeeze()
 
-        return action.flatten()
+        return action.squeeze()
 
     def policy_with_noise(self, state, goal, to_numpy=True):
         state = get_tensor(state)
@@ -162,9 +162,9 @@ class TD3Controller(object):
         action = torch.max(action, -self.actor.max_action)
 
         if to_numpy:
-            return action.cpu().data.numpy().flatten()
+            return action.cpu().data.numpy().squeeze()
 
-        return action.flatten()
+        return action.squeeze()
 
     def _sample_exploration_noise(self, actions):
         mean = torch.zeros(actions.size()).to(device)

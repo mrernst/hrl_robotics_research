@@ -36,8 +36,6 @@ def get_config():
 				'eval_freq': 1e4,
 				# Max time steps to run environment
 				'max_timesteps': 10e6,
-				# Subgoal dimension
-				'subgoal_dim': 15, #3 for ant
 				# Save model and optimizer parameters
 				'save_model': True,
 				# Save model every n episodes
@@ -54,6 +52,8 @@ def get_config():
 				'agent_type': "flat",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
+				# Subgoal dimension
+				'subgoal_dim': 15, #3
 				# sub agent configuration
 				'sub': {
 					# Std of Gaussian exploration noise

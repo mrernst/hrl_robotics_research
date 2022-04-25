@@ -34,16 +34,24 @@ class FlatAgent(Agent):
     def __init__(
         self,
         state_dim,
-        action_dim,
         goal_dim,
+        action_dim,
         max_action,
         model_path,
         model_save_freq,
+        start_timesteps,
         buffer_size,
         batch_size,
-        start_timesteps,
+        actor_lr,
+        critic_lr,
+        actor_hidden_layers,
+        critic_hidden_layers,
+        expl_noise,
         policy_noise,
-        noise_clip):
+        noise_clip,
+        discount,
+        policy_freq,
+        tau):
     
         self.con = TD3Controller(
             state_dim=state_dim,
@@ -51,8 +59,16 @@ class FlatAgent(Agent):
             action_dim=action_dim,
             max_action=max_action,
             model_path=model_path,
+            actor_lr=actor_lr,
+            critic_lr=critic_lr,
+            actor_hidden_layers=actor_hidden_layers,
+            critic_hidden_layers=critic_hidden_layers,
+            expl_noise=expl_noise,
             policy_noise=policy_noise,
             noise_clip=noise_clip,
+            discount=discount,
+            policy_freq=policy_freq,
+            tau=tau
             )
         self.controllers = [self.con]
     

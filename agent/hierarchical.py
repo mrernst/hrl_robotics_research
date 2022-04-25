@@ -38,67 +38,102 @@ class HiroAgent(Agent):
         action_dim,
         goal_dim,
         subgoal_dim,
-        max_action_low,
-        start_timesteps,
-        model_save_freq,
+        max_action_sub,
         model_path,
-        buffer_size_high,
-        buffer_size_low,
-        batch_size_high,
-        batch_size_low,
+        model_save_freq,
+        start_timesteps,
+        # meta agent arguments
+        buffer_size_meta,
+        batch_size_meta,
+        actor_lr_meta,
+        critic_lr_meta,
+        actor_hidden_layers_meta,
+        critic_hidden_layers_meta,
+        expl_noise_meta,
+        policy_noise_meta,
+        noise_clip_meta,
+        discount_meta,
+        policy_freq_meta,
+        tau_meta,
         buffer_freq,
         train_freq,
         reward_scaling,
-        policy_freq_high,
-        policy_freq_low,
-        policy_noise_high,
-        policy_noise_low,
-        noise_clip_high,
-        noise_clip_low):
+        # sub agent arguments
+        buffer_size_sub,
+        batch_size_sub,
+        actor_lr_sub,
+        critic_lr_sub,
+        actor_hidden_layers_sub,
+        critic_hidden_layers_sub,
+        expl_noise_sub,
+        policy_noise_sub,
+        noise_clip_sub,
+        discount_sub,
+        policy_freq_sub,
+        tau_sub,
+        ):
     
         self.subgoal = Subgoal(subgoal_dim)
-        max_action_high = torch.Tensor(self.subgoal.action_space.high * np.ones(subgoal_dim))
+        max_action_meta = torch.Tensor(self.subgoal.action_space.high * np.ones(subgoal_dim))
+        # scale policy_noise and noise clip (should maybe be done outside of the class)
+        policy_noise_meta *= float(self.subgoal.action_space.high[0])
+        noise_clip_meta *= float(self.subgoal.action_space.high[0])
+        
         self.model_save_freq = model_save_freq
     
         self.high_con = HighLevelController(
             state_dim=state_dim,
             goal_dim=goal_dim,
             action_dim=subgoal_dim,
-            max_action=max_action_high,
+            max_action=max_action_meta,
             model_path=model_path,
-            policy_freq=policy_freq_high,
-            policy_noise=policy_noise_high,
-            noise_clip=noise_clip_high,
+            actor_lr=actor_lr_meta,
+            critic_lr=critic_lr_meta,
+            actor_hidden_layers=actor_hidden_layers_meta,
+            critic_hidden_layers=critic_hidden_layers_meta,
+            expl_noise=expl_noise_meta,
+            policy_noise=policy_noise_meta,
+            noise_clip=noise_clip_meta,
+            discount=discount_meta,
+            policy_freq=policy_freq_meta,
+            tau=tau_meta,
             )
     
         self.low_con = LowLevelController(
             state_dim=state_dim,
             goal_dim=subgoal_dim,
             action_dim=action_dim,
-            max_action=max_action_low,
+            max_action=max_action_sub,
             model_path=model_path,
-            policy_freq=policy_freq_low,
-            policy_noise=policy_noise_low,
-            noise_clip=noise_clip_low,
+            actor_lr=actor_lr_sub,
+            critic_lr=critic_lr_sub,
+            actor_hidden_layers=actor_hidden_layers_sub,
+            critic_hidden_layers=critic_hidden_layers_sub,
+            expl_noise=expl_noise_sub,
+            policy_noise=policy_noise_sub,
+            noise_clip=noise_clip_sub,
+            discount=discount_sub,
+            policy_freq=policy_freq_sub,
+            tau=tau_sub,
             )
         
         self.controllers = [self.low_con, self.high_con]
     
-        self.replay_buffer_low = LowLevelReplayBuffer(
+        self.replay_buffer_sub = LowLevelReplayBuffer(
             state_dim=state_dim,
             goal_dim=subgoal_dim,
             action_dim=action_dim,
-            buffer_size=buffer_size_low,
-            batch_size=batch_size_low
+            buffer_size=buffer_size_sub,
+            batch_size=batch_size_sub
             )
     
-        self.replay_buffer_high = HighLevelReplayBuffer(
+        self.replay_buffer_meta = HighLevelReplayBuffer(
             state_dim=state_dim,
             goal_dim=goal_dim,
             subgoal_dim=subgoal_dim,
             action_dim=action_dim,
-            buffer_size=buffer_size_high,
-            batch_size=batch_size_high,
+            buffer_size=buffer_size_meta,
+            batch_size=batch_size_meta,
             freq=buffer_freq
             )
     
@@ -147,7 +182,7 @@ class HiroAgent(Agent):
         self.sr = self.low_reward(s, self.sg, n_s)
     
         # Low Replay Buffer
-        self.replay_buffer_low.append(
+        self.replay_buffer_sub.append(
             s, self.sg, a, n_s, self.n_sg, self.sr, float(d))
     
         # High Replay Buffer
@@ -155,7 +190,7 @@ class HiroAgent(Agent):
             if len(self.buf[6]) == self.buffer_freq:
                 self.buf[4] = s
                 self.buf[5] = float(d)
-                self.replay_buffer_high.append(
+                self.replay_buffer_meta.append(
                     state=self.buf[0],
                     goal=self.buf[1],
                     action=self.buf[2],
@@ -176,12 +211,12 @@ class HiroAgent(Agent):
         td_errors = {}
     
         if global_step >= self.start_timesteps:
-            loss, td_error = self.low_con.train(self.replay_buffer_low)
+            loss, td_error = self.low_con.train(self.replay_buffer_sub)
             losses.update(loss)
             td_errors.update(td_error)
     
             if global_step % self.train_freq == 0:
-                loss, td_error = self.high_con.train(self.replay_buffer_high, self.low_con)
+                loss, td_error = self.high_con.train(self.replay_buffer_meta, self.low_con)
                 losses.update(loss)
                 td_errors.update(td_error)
     

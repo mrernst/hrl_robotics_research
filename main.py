@@ -87,7 +87,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     
     # create world
     import env.mujoco as emj
-    env = MakeGoalBased(gym.make(main_cnf.env_name))
+    env = gym.make(main_cnf.env_name)
 
     #EnvWithGoal(create_maze_env(main_cnf.env_name), main_cnf.env_name)
     
@@ -105,44 +105,69 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     action_dim =  env.action_space.shape[0]
     max_action =  torch.Tensor(env.action_space.high * np.ones(action_dim))
     
+    
     # spawn agents
     if agent_cnf.agent_type == 'flat':
         agent = FlatAgent(
             state_dim=state_dim,
-            action_dim=action_dim,
             goal_dim=goal_dim,
+            action_dim=action_dim,
             max_action=max_action,
-            model_save_freq=main_cnf.model_save_freq,
             model_path=f'{results_dir}/{file_name}',
+            model_save_freq=main_cnf.model_save_freq,
+            start_timesteps=main_cnf.start_timesteps,
             buffer_size=agent_cnf.sub.buffer_size,
             batch_size=agent_cnf.sub.batch_size,
-            start_timesteps=main_cnf.start_timesteps,
+            actor_lr=agent_cnf.sub.actor_lr,
+            critic_lr=agent_cnf.sub.critic_lr,
+            actor_hidden_layers=agent_cnf.sub.actor_hidden_layers,
+            critic_hidden_layers=agent_cnf.sub.critic_hidden_layers,
+            expl_noise=agent_cnf.sub.expl_noise,
             policy_noise=agent_cnf.sub.policy_noise * float(env.action_space.high[0]),
             noise_clip=agent_cnf.sub.noise_clip * float(env.action_space.high[0]),
+            discount=agent_cnf.sub.discount,
+            policy_freq=agent_cnf.sub.policy_freq,
+            tau=agent_cnf.sub.tau,
             )
     elif agent_cnf.agent_type == 'hiro':
         agent = HiroAgent(
             state_dim=state_dim,
             action_dim=action_dim,
             goal_dim=goal_dim,
-            subgoal_dim=main_cnf.subgoal_dim,
-            max_action_low=max_action,
-            start_timesteps=main_cnf.start_timesteps,
+            subgoal_dim=agent_cnf.subgoal_dim,
+            max_action_sub=max_action,
             model_path=f'{results_dir}/{file_name}',
             model_save_freq=main_cnf.model_save_freq,
-            buffer_size_high=agent_cnf.meta.buffer_size,
-            buffer_size_low=agent_cnf.sub.buffer_size,
-            batch_size_high=agent_cnf.meta.batch_size,
-            batch_size_low=agent_cnf.sub.batch_size,
+            start_timesteps=main_cnf.start_timesteps,
+            # meta agent arguments
+            buffer_size_meta=agent_cnf.meta.buffer_size,
+            batch_size_meta=agent_cnf.meta.batch_size,
+            actor_lr_meta=agent_cnf.meta.actor_lr,
+            critic_lr_meta=agent_cnf.meta.critic_lr,
+            actor_hidden_layers_meta=agent_cnf.meta.actor_hidden_layers,
+            critic_hidden_layers_meta=agent_cnf.meta.critic_hidden_layers,
+            expl_noise_meta=agent_cnf.meta.expl_noise,
+            policy_noise_meta=agent_cnf.meta.policy_noise,
+            noise_clip_meta=agent_cnf.meta.noise_clip,
+            discount_meta=agent_cnf.meta.discount,
+            policy_freq_meta=agent_cnf.meta.policy_freq,
+            tau_meta=agent_cnf.meta.tau,
             buffer_freq=agent_cnf.meta.buffer_freq,
             train_freq=agent_cnf.meta.train_freq,
             reward_scaling=agent_cnf.meta.reward_scaling,
-            policy_freq_high=agent_cnf.meta.policy_freq,
-            policy_freq_low=agent_cnf.sub.policy_freq,
-            policy_noise_high=agent_cnf.meta.policy_noise,
-            policy_noise_low=agent_cnf.sub.policy_noise,
-            noise_clip_high=agent_cnf.meta.noise_clip,
-            noise_clip_low=agent_cnf.sub.noise_clip,
+            # sub agent arguments
+            buffer_size_sub=agent_cnf.sub.buffer_size,
+            batch_size_sub=agent_cnf.sub.batch_size,
+            actor_lr_sub=agent_cnf.sub.actor_lr,
+            critic_lr_sub=agent_cnf.sub.critic_lr,
+            actor_hidden_layers_sub=agent_cnf.sub.actor_hidden_layers,
+            critic_hidden_layers_sub=agent_cnf.sub.critic_hidden_layers,
+            expl_noise_sub=agent_cnf.sub.expl_noise,
+            policy_noise_sub=agent_cnf.sub.policy_noise * float(env.action_space.high[0]),
+            noise_clip_sub=agent_cnf.sub.noise_clip * float(env.action_space.high[0]),
+            discount_sub=agent_cnf.sub.discount,
+            policy_freq_sub=agent_cnf.sub.policy_freq,
+            tau_sub=agent_cnf.sub.tau,
             )
     else:
         raise NotImplementedError('Choose between flat and hierarchical (hiro) agent')
