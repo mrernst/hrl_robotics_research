@@ -66,7 +66,7 @@ class GoalWrapper(Wrapper):
             if env._maze_id == "Push":
                 self.fix_goal_xy = np.array([-4, 0])
             elif env._maze_id == "Maze1":
-                self.fix_goal_xy = np.array([8, 0])
+                self.fix_goal_xy = np.array([maze_size_scaling*2, 0]) #maze_size_scaling
             else:
                 print("Unknown env", env._maze_id)
                 assert False
@@ -75,7 +75,7 @@ class GoalWrapper(Wrapper):
             if env._maze_id == "Push":
                 self.fix_goal_xy = np.array([-4, 4])
             elif env._maze_id == "Maze1":
-                self.fix_goal_xy = np.array([8, 8])
+                self.fix_goal_xy = np.array([maze_size_scaling*2, maze_size_scaling*2])
             else:
                 print("Unknown env", env._maze_id)
                 assert False
@@ -173,11 +173,11 @@ def create_maze_env(env_name=None, top_down_view=False, maze_size_scaling=4, ran
         maze_id = 'Maze'
     elif env_name == 'Maze1':
         maze_id = 'Maze1'
-        maze_size_scaling = 4
+        #maze_size_scaling = 4
     elif env_name == 'Push':
         maze_id = 'Push'
         manual_collision = True
-        maze_size_scaling = 4
+        #maze_size_scaling = 4
     elif env_name == 'Fall':
         maze_id = 'Fall'
     elif env_name == 'Block':

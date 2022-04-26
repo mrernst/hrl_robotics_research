@@ -72,7 +72,10 @@ class HiroAgent(Agent):
         policy_freq_sub,
         tau_sub,
         ):
-    
+        
+        # TODO: decouple buffer frequency from subgoal frequency at some point
+        # I don't think these should be the same anymore
+        
         self.subgoal = Subgoal(subgoal_dim)
         max_action_meta = torch.Tensor(self.subgoal.action_space.high * np.ones(subgoal_dim))
         # scale policy_noise and noise clip (should maybe be done outside of the class)
@@ -245,9 +248,18 @@ class HiroAgent(Agent):
         return sg
     
     def subgoal_transition(self, s, sg, n_s):
+        """
+        subgoal transition function, provided as input to the low
+        level controller.
+        """
         return s[:sg.shape[0]] + sg - n_s[:sg.shape[0]]
     
     def low_reward(self, s, sg, n_s):
+        """
+        reward function for low level controller.
+        rewards the low level controller for getting close to the
+        subgoals assigned to it.
+        """
         abs_s = s[:sg.shape[0]] + sg
         return -np.sqrt(np.sum((abs_s - n_s[:sg.shape[0]])**2))
     

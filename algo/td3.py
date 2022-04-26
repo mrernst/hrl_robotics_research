@@ -148,9 +148,9 @@ class TD3Controller(object):
         goal = get_tensor(goal)
         action = self.actor(torch.cat([state, goal], 1))
         if to_numpy:
-            return action.cpu().data.numpy().squeeze()
+            return action.cpu().data.numpy().flatten()
 
-        return action.squeeze()
+        return action.flatten()
 
     def policy_with_noise(self, state, goal, to_numpy=True):
         state = get_tensor(state)
@@ -162,9 +162,9 @@ class TD3Controller(object):
         action = torch.max(action, -self.actor.max_action)
 
         if to_numpy:
-            return action.cpu().data.numpy().squeeze()
+            return action.cpu().data.numpy().flatten()
 
-        return action.squeeze()
+        return action.flatten()
 
     def _sample_exploration_noise(self, actions):
         mean = torch.zeros(actions.size()).to(device)
@@ -177,7 +177,7 @@ class TD3Controller(object):
 
         # check_??
         state = torch.cat([state, goal], 1).to(device)
-        next_state = torch.cat([next_state, next_goal], 1).to(device)
+        next_state = torch.cat([next_state, goal], 1).to(device)
 
         with torch.no_grad():
             # Select action according to policy and add clipped noise
@@ -327,79 +327,142 @@ class HighLevelController(TD3Controller):
         self.action_dim = action_dim
         # needed for off_policy_correction
 
-    def off_policy_corrections(
-        self,
+    
+    def _off_policy_corrections(
+        self, 
         low_con,
         batch_size,
-        sgoals,
         states,
         actions,
-        candidate_goals=8
-    ):
-
-        first_s = [s[0] for s in states]  # First x
-        last_s = [s[-1] for s in states]  # Last x
-
-        # Shape: (batch_size, 1, subgoal_dim)
-        # diff = 1
-        diff_goal = (np.array(last_s) -
-                     np.array(first_s))[:, np.newaxis, :self.action_dim]
-
-        # Shape: (batch_size, 1, subgoal_dim)
-        # original = 1
-        # random = candidate_goals
-        original_goal = np.array(sgoals)[:, np.newaxis, :]
-        random_goals = np.random.normal(loc=diff_goal, scale=.5*self.max_action[None, None, :],
-                                        size=(batch_size, candidate_goals, original_goal.shape[-1]))
-        random_goals = random_goals.clip(-self.max_action, self.max_action)
-
-        # Shape: (batch_size, 10, subgoal_dim)
-        candidates = np.concatenate(
-            [original_goal, diff_goal, random_goals], axis=1)
-        #states = np.array(states)[:, :-1, :]
-        actions = np.array(actions)
-        seq_len = len(states[0])
+        next_states,
+        low_states,
+        low_actions,
+        candidate_goals=8):
+    
+        # Scale
+        goal_dim = self.action_dim
+        spec_range = low_con.max_action.cpu().data.numpy()
+        # Sample from normal distribution
+        loc = (next_states - states)[:, np.newaxis, :goal_dim]
+        scale = 0.5 * self.max_action[None, None, :]
+        original_goal = np.array(actions[:, np.newaxis, :])
+        random_goals = np.random.normal(loc=loc, scale=scale, size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        candidates = np.concatenate([original_goal, loc, random_goals], axis=1)
+        candidates = candidates.clip(-self.max_action.cpu().data.numpy(), self.max_action.cpu().data.numpy())
 
         # For ease
+        low_actions = np.array(low_actions)
+        seq_len = len(low_states[0])
         new_batch_sz = seq_len * batch_size
-        action_dim = actions[0][0].shape
-        obs_dim = states[0][0].shape
+        low_action_dim = low_actions[0][0].shape
+        low_obs_dim = low_states[0][0].shape
         ncands = candidates.shape[1]
-
-        true_actions = actions.reshape((new_batch_sz,) + action_dim)
-        observations = states.reshape((new_batch_sz,) + obs_dim)
+        
+        true_low_actions = low_actions.reshape((new_batch_sz,) + low_action_dim)
+        observations = low_states.reshape((new_batch_sz,) + low_obs_dim)
         goal_shape = (new_batch_sz, self.action_dim)
-        # observations = get_obs_tensor(observations, sg_corrections=True)
-
-        # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
-        # batched_candidates = batched_candidates.transpose(1, 0, 2)
-
-        policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
-
+        
+        pred_actions = np.zeros((ncands, new_batch_sz) + low_action_dim)
+        
         for c in range(ncands):
             subgoal = candidates[:, c]
-            candidate = (subgoal + states[:, 0, :self.action_dim]
-                         )[:, None] - states[:, :, :self.action_dim]
+            candidate = (subgoal + low_states[:, 0, :self.action_dim])[:, None] - low_states[:, :, :self.action_dim]
             candidate = candidate.reshape(*goal_shape)
-            policy_actions[c] = low_con.policy(observations, candidate)
+            #print(pred_actions.shape[1:])
+            pred_actions[c] = low_con.policy(torch.tensor(observations).float(), torch.tensor(candidate).float()).reshape(pred_actions.shape[1:])
+        
+        difference = (pred_actions - true_low_actions)
+        # difference = np.where(difference != -np.inf, difference, 0)
+        difference = difference.reshape((ncands, batch_size, seq_len) + low_action_dim).transpose(1, 0, 2, 3)
+        
+        normalized_error = - np.square(difference) / np.square(spec_range)
+        #print(normalized_error.shape)
+        fitness = np.sum(normalized_error, axis=(2, 3))
+        best_actions = np.argmax(fitness, axis=-1)
+        
+        return candidates[np.arange(batch_size), best_actions]
 
-        difference = (policy_actions - true_actions)
-        difference = np.where(difference != -np.inf, difference, 0)
-        difference = difference.reshape(
-            (ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
-
-        logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
-        max_indices = np.argmax(logprob, axis=-1)
-
-        return candidates[np.arange(batch_size), max_indices]
+#     def off_policy_corrections(
+#         self,
+#         low_con,
+#         batch_size,
+#         sgoals,
+#         states,
+#         actions,
+#         candidate_goals=8
+#     ):
+# 
+#         first_s = [s[0] for s in states]  # First x
+#         last_s = [s[-1] for s in states]  # Last x
+# 
+#         # Shape: (batch_size, 1, subgoal_dim)
+#         # diff = 1
+#         diff_goal = (np.array(last_s) -
+#                      np.array(first_s))[:, np.newaxis, :self.action_dim]
+# 
+#         # Shape: (batch_size, 1, subgoal_dim)
+#         # original = 1
+#         # random = candidate_goals
+#         original_goal = np.array(sgoals)[:, np.newaxis, :]
+#         random_goals = np.random.normal(loc=diff_goal, scale=.5*self.max_action[None, None, :],
+#                                         size=(batch_size, candidate_goals, original_goal.shape[-1]))
+#         random_goals = random_goals.clip(-self.max_action, self.max_action)
+#         # Shape: (batch_size, 10, subgoal_dim)
+#         candidates = np.concatenate(
+#             [original_goal, diff_goal, random_goals], axis=1)
+#         #states = np.array(states)[:, :-1, :]
+#         actions = np.array(actions)
+#         seq_len = len(states[0])
+#         #print(candidates.dtype)# -> float64
+# 
+#         # For ease
+#         new_batch_sz = seq_len * batch_size
+#         action_dim = actions[0][0].shape
+#         obs_dim = states[0][0].shape
+#         ncands = candidates.shape[1]
+# 
+#         true_actions = actions.reshape((new_batch_sz,) + action_dim)
+#         observations = states.reshape((new_batch_sz,) + obs_dim)
+#         goal_shape = (new_batch_sz, self.action_dim)
+#         # observations = get_obs_tensor(observations, sg_corrections=True)
+# 
+#         # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
+#         # batched_candidates = batched_candidates.transpose(1, 0, 2)
+# 
+#         policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
+# 
+#         for c in range(ncands):
+#             subgoal = candidates[:, c]
+#             candidate = (subgoal + states[:, 0, :self.action_dim]
+#                          )[:, None] - states[:, :, :self.action_dim]
+#             candidate = candidate.reshape(*goal_shape)
+#             policy_actions[c] = low_con.policy(observations, candidate).reshape(policy_actions.shape[1:]) #TODO: this reshaping maybe does not have to be done manually here # also the low_con_policy should not be trained here?
+# 
+#         difference = (policy_actions - true_actions)
+#         difference = np.where(difference != -np.inf, difference, 0)
+#         difference = difference.reshape(
+#             (ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
+# 
+#         logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
+#         max_indices = np.argmax(logprob, axis=-1)
+#         return candidates[np.arange(batch_size), max_indices]
 
     def train(self, replay_buffer, low_con):
         states, goals, actions, n_states, rewards, not_done, states_arr, actions_arr = replay_buffer.sample()
 
-        actions = self.off_policy_corrections(
+        # actions = self.off_policy_corrections(
+        #     low_con,
+        #     replay_buffer.batch_size,
+        #     actions.cpu().data.numpy(),
+        #     states_arr.cpu().data.numpy(),
+        #     actions_arr.cpu().data.numpy())
+        
+        actions = self._off_policy_corrections(
             low_con,
             replay_buffer.batch_size,
+            states.cpu().data.numpy(),
             actions.cpu().data.numpy(),
+            n_states.cpu().data.numpy(),
             states_arr.cpu().data.numpy(),
             actions_arr.cpu().data.numpy())
 

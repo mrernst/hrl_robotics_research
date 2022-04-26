@@ -87,6 +87,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     
     # create world
     import env.mujoco as emj
+    #env = MakeGoalBased(gym.make(main_cnf.env_name))
     env = gym.make(main_cnf.env_name)
 
     #EnvWithGoal(create_maze_env(main_cnf.env_name), main_cnf.env_name)

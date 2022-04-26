@@ -47,7 +47,8 @@ for name_t in all_name:
         register(
             id=name_t + Test + '-v0',
             entry_point='env.mujoco.create_maze_env:create_maze_env',
-            kwargs={'env_name': name_t, 'goal_args': goal_args, 'maze_size_scaling': 8, 'random_start': random_start},
+            kwargs={'env_name': name_t, 'goal_args': goal_args, 'maze_size_scaling': 8, 'random_start': random_start,
+            "fix_goal": fix_goal, "top_down_view": top_down, 'test':Test},
             max_episode_steps=max_timestep,
         )
 
@@ -63,6 +64,7 @@ for name_t in all_name:
         register(
             id=name_t + Test + '-v2',
             entry_point='env.mujoco.create_maze_env:create_maze_env',
-            kwargs={'env_name': name_t, 'goal_args': goal_args, 'maze_size_scaling': 2, 'random_start': random_start},
+            kwargs={'env_name': name_t, 'goal_args': goal_args, 'maze_size_scaling': 2, 'random_start': random_start,
+            "fix_goal": fix_goal, "top_down_view": top_down, 'test':Test},
             max_episode_steps=max_timestep,
         )
