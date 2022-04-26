@@ -25,7 +25,7 @@ def get_config():
 		{
 			'main': {
 				# OpenAI gym environment name
-				'env_name': "AntMaze1-v2",
+				'env_name': "AntMaze1-v1",
 				# General Training parameter
 				'train': True,
 				# General Evaluation parameter
