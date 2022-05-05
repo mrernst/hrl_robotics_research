@@ -64,16 +64,6 @@ class MetricLogger():
         self.curr_ep_q = 0.0
         self.curr_ep_loss_length = 0
     
-    def write_to_tensorboard(self, global_step):
-        # extra function or even class to write stats down
-        self.writer.add_scalar(
-            'training/reward', self.ep_rewards[-1], global_step)
-        self.writer.add_scalar(
-            'training/episode_length', self.ep_lengths[-1], global_step)
-        # self.writer.add_scalar('agent/avg_loss', ep_avg_loss, global_step)
-        # self.writer.add_scalar('agent/avg_Q', ep_avg_q, global_step)
-        
-        
 
 
 
