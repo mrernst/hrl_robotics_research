@@ -217,7 +217,9 @@ class MazeEnv(gym.Env):
                             pos="0 0 0",
                             type="ball"
                         )
-
+        
+        #TODO the goal and subgoal should be defined here
+        
         torso = tree.find(".//body[@name='torso']")
         geoms = torso.findall(".//geom")
         for geom in geoms:
@@ -434,6 +436,7 @@ class MazeEnv(gym.Env):
         return [seed]
 
     def reset(self, goal):
+        # TODO reset should only relocate everything, not reload the model every time from a temporary file
         self.goal = goal
 
         if self.visualize_goal:  # remove the prev goal and add a new goal
@@ -448,47 +451,49 @@ class MazeEnv(gym.Env):
             self.goal_element = \
                 ET.SubElement(
                     self.worldbody, "geom",
-                    name="goal_%d_%d" % (goal_x, goal_y),
+                    name="goal_geom",
+                    #name="goal_%d_%d" % (goal_x, goal_y),
                     pos="%f %f %f" % (goal_x,
                                       goal_y,
                                       self.MAZE_HEIGHT / 2 * size_scaling),
                     size="%f %f %f" % (0.1 * size_scaling,  # smaller than the block to prevent collision
                                        0.1 * size_scaling,
                                        self.MAZE_HEIGHT / 2 * size_scaling),
-                    type="box",
+                    type="sphere",
                     material="",
                     contype="1",
                     conaffinity="1",
                     rgba="0.0 1.0 0.0 0.5"
                 )
             # 
-            # # default subgoal is just the final goal
-            # subgoal = [0.,0.]
-            # size_scaling = self.MAZE_SIZE_SCALING
-            # subgoal_x, subgoal_y = subgoal[0], subgoal[1]
-            # # remove the original goal
-            # try:
-            #     self.worldbody.remove(self.subgoal_element)
-            #     print('success')
-            # except AttributeError:
-            #     pass
-            # # offset all coordinates so that robot starts at the origin
-            # self.subgoal_element = \
-            #     ET.SubElement(
-            #         self.worldbody, "geom",
-            #         name="subgoal_%d_%d" % (subgoal_x, subgoal_y),
-            #         pos="%f %f %f" % (subgoal_x,
-            #                           subgoal_y,
-            #                           self.MAZE_HEIGHT / 2 * size_scaling),
-            #         size="%f %f %f" % (0.1 * size_scaling,  # smaller than the block to prevent collision
-            #                            0.1 * size_scaling,
-            #                            self.MAZE_HEIGHT / 2 * size_scaling),
-            #         type="box",
-            #         material="",
-            #         contype="1",
-            #         conaffinity="1",
-            #         rgba="1.0 1.0 0.0 0.5"
-            #     )
+            # default subgoal is just the final goal
+            self.subgoal = subgoal = goal
+            size_scaling = self.MAZE_SIZE_SCALING
+            subgoal_x, subgoal_y = subgoal[0], subgoal[1]
+            # remove the original goal
+            try:
+                self.worldbody.remove(self.subgoal_element)
+                print('success')
+            except AttributeError:
+                pass
+            # offset all coordinates so that robot starts at the origin
+            self.subgoal_element = \
+                ET.SubElement(
+                    self.worldbody, "geom",
+                    name="subgoal_geom",
+                    # name="subgoal_%d_%d" % (subgoal_x, subgoal_y),
+                    pos="%f %f %f" % (subgoal_x,
+                                      subgoal_y,
+                                      self.MAZE_HEIGHT / 2 * size_scaling),
+                    size="%f %f %f" % (0.025 * size_scaling,  # smaller than the block to prevent collision
+                                       0.025 * size_scaling,
+                                       self.MAZE_HEIGHT / 2 * size_scaling * 0.25),
+                    type="sphere",
+                    material="",
+                    contype="1",
+                    conaffinity="1",
+                    rgba="1.0 1.0 0.0 0.5"
+                )
             # Note: running the lines below will make the robot position wrong! (because the graph is rebuilt)
             torso = self.tree.find(".//body[@name='torso']")
             geoms = torso.findall(".//geom")
@@ -517,8 +522,23 @@ class MazeEnv(gym.Env):
     def viewer(self):
         return self.wrapped_env.viewer
 
-    def render(self, *args, **kwargs):
+    def render(self, *args, subgoal=None, **kwargs):
+        self._render_callback(subgoal=subgoal)
         return self.wrapped_env.render(*args, **kwargs)
+    
+    def _render_callback(self, subgoal):
+        """A custom callback that is called before rendering. Can be used
+        to implement custom visualizations.
+        """
+        # Visualize target.
+        sites_offset = [0]
+        sg_site_id = self.wrapped_env.sim.model.geom_name2id("subgoal_geom")
+        fg_site_id = self.wrapped_env.sim.model.geom_name2id("goal_geom")
+        
+        if subgoal is not None:
+            self.wrapped_env.sim.model.geom_pos[sg_site_id] = subgoal[:3]
+        self.wrapped_env.sim.forward()
+        pass
 
     @property
     def observation_space(self):
