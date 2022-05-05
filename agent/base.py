@@ -74,12 +74,13 @@ class Agent(object):
 				step = 0
 				
 				self.set_final_goal(fg)
-		
+				
 				while not done:
 					if render:
-						env.render(subgoal=self.sg+s[:self.sg.shape[0]]) #if possible render subgoal
-						#env.render() #if possible render subgoal
-						#print(self.sg, self.sg+s[:2])
+						if hasattr(self, 'sg'):
+							env.render(subgoal=self.sg+s[:self.sg.shape[0]]) #if possible render subgoal
+						else:
+							env.render()
 					if sleep>0:
 						time.sleep(sleep)
 		
@@ -90,8 +91,10 @@ class Agent(object):
 					step += 1
 					self.end_step()
 					if save_video:
-						video.append_data(env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array'))
-						#video.append_data(env.render(mode='rgb_array'))
+						if hasattr(self, 'sg'):
+							video.append_data(env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array'))
+						else:
+							video.append_data(env.render(mode='rgb_array'))
 				else:
 					error = np.sqrt(np.sum(np.square(fg-s[:fg_dim])))
 					print(" " * 80 + "\r" +
