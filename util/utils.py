@@ -21,10 +21,14 @@ from collections import OrderedDict
 # custom functions
 # -----
 
+# TODO this should be configureable
 class SubgoalActionSpace(object):
     def __init__(self, dim):
-        limits = np.array([-10, -10, -0.5, -1, -1, -1, -1,
-                    -0.5, -0.3, -0.5, -0.3, -0.5, -0.3, -0.5, -0.3])
+        limits = np.array(
+            # [-10, -10, -0.5, 
+            [-4, -4, -0.5, 
+            -1, -1, -1, -1,
+            -0.5, -0.3, -0.5, -0.3, -0.5, -0.3, -0.5, -0.3])
         self.shape = (dim,1)
         self.low = limits[:dim]
         self.high = -self.low
