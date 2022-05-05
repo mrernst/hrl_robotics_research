@@ -57,7 +57,7 @@ def get_config():
 				# sub agent configuration
 				'sub': {
 					# Std of Gaussian exploration noise
-					'expl_noise': 1.0,#0.1,
+					'expl_noise': 1.0, #0.1, #1.0,#0.1,
 					# Buffer size
 					'buffer_size': int(2e5),#int(1e6),
 					# Batch size for both actor and critic
@@ -73,9 +73,9 @@ def get_config():
 					# Frequency of delayed policy updates
 					'policy_freq': 2,
 					# Learning rate of the actor
-					'actor_lr': 0.0001,
+					'actor_lr': 0.0001, #0.0001
 					# Learning rate of the critic
-					'critic_lr': 0.001,
+					'critic_lr': 0.001, #0.001
 					# Hidden layer size of the actor
 					'actor_hidden_layers': [256, 256],
 					# Hidden layer size of the critic
@@ -84,7 +84,7 @@ def get_config():
 				# meta agent configuration
 				'meta': {
 					# Std of Gaussian exploration noise
-					'expl_noise': 1.0,#0.1,
+					'expl_noise': 1.0,#1.0,#0.1,
 					# Buffer size
 					'buffer_size': int(2e5), #int(1e6),
 					# Batch size for both actor and critic
@@ -100,9 +100,9 @@ def get_config():
 					# Frequency of delayed policy updates
 					'policy_freq': 2,
 					# Learning rate of the actor
-					'actor_lr': 0.0001,
+					'actor_lr': 0.0001, #0.0001
 					# Learning rate of the critic
-					'critic_lr': 0.001,
+					'critic_lr': 0.001, #0.001
 					# Hidden layer size of the actor
 					'actor_hidden_layers': [256, 256],
 					# Hidden layer size of the critic
