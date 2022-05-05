@@ -37,7 +37,7 @@ from agent.hierarchical import HiroAgent
 def final_evaluation(main_cnf, timestep, env, agent, results_dir):
 
     #rewards, success_rate = agent.evaluate_policy(env, main_cnf.eval_episodes, main_cnf.render, main_cnf.save_video, main_cnf.sleep)
-    rewards, success_rate = agent.evaluate_policy(env, 10, True, True, -1, results_dir, timestep)
+    rewards, success_rate = agent.evaluate_policy(env, 15, True, True, -1, results_dir, timestep)
     
     print('mean:{mean:.2f}, \
             std:{std:.2f}, \
@@ -47,9 +47,10 @@ def final_evaluation(main_cnf, timestep, env, agent, results_dir):
                 std=np.std(rewards), 
                 median=np.median(rewards), 
                 success=success_rate))
+    return np.mean(rewards), success_rate
 
 def evaluate(timestep, env, agent):
-    rewards, success_rate = agent.evaluate_policy(env)
+    rewards, success_rate = agent.evaluate_policy(env, 10, render=True)
     #self.logger.write('Success Rate', success_rate, e)
     
     print(" " * 80 + "\r" + "---------------------------------------")
@@ -192,7 +193,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
         
             agent.load(main_cnf.load_episode)
             print("---------------------------------------")
-        final_evaluation(main_cnf, main_cnf.max_timesteps, env, agent, results_dir)
+        _, _ = final_evaluation(main_cnf, main_cnf.max_timesteps, env, agent, results_dir)
     
      
     # space for post experiment analysis
@@ -247,7 +248,9 @@ def training_loop(
 
         # episode is done
         if done:
+            #print(agent.episode_subreward)
             agent.end_episode(logger.episode_number, logger.writer)
+
             # +1 to account for 0 indexing. +0 on ep_timesteps
             # since it will increment +1 even if done=True
             if main_cnf.verbose:
@@ -266,16 +269,24 @@ def training_loop(
             # episode based metrics, automatically resets episode timesteps
             logger.log_episode()
 
-        # Evaluate episode
+        # Evaluate agent
         if (t + 1) % main_cnf.eval_freq == 0:
             mean_eval_reward, success_rate = evaluate(t, env, agent)
+        
+            # log evaluation results
+                
+            logger.writer.add_scalar(
+                'evaluation/success_rate', success_rate, t)
+            logger.writer.add_scalar(
+                'evaluation/reward', mean_eval_reward, t)
             
-            # log results
-            logger.write_to_tensorboard(t)
+            # log general results
+            
             logger.writer.add_scalar(
-            'training/success_rate', success_rate, t)
+                'training/reward', logger.ep_rewards[-1], t)
             logger.writer.add_scalar(
-                'training/eval_reward', mean_eval_reward, t)
+                'training/episode_length', logger.ep_lengths[-1], t)
+            
             for con in agent.controllers:
                 for k in con.curr_train_metrics.keys():
                     logger.writer.add_scalar(
