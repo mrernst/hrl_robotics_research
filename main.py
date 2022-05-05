@@ -36,7 +36,6 @@ from agent.hierarchical import HiroAgent
 
 def final_evaluation(main_cnf, timestep, env, agent, results_dir):
 
-    #rewards, success_rate = agent.evaluate_policy(env, main_cnf.eval_episodes, main_cnf.render, main_cnf.save_video, main_cnf.sleep)
     rewards, success_rate = agent.evaluate_policy(env, 15, True, True, -1, results_dir, timestep)
     
     print('mean:{mean:.2f}, \
@@ -50,7 +49,7 @@ def final_evaluation(main_cnf, timestep, env, agent, results_dir):
     return np.mean(rewards), success_rate
 
 def evaluate(timestep, env, agent):
-    rewards, success_rate = agent.evaluate_policy(env, 10, render=True)
+    rewards, success_rate = agent.evaluate_policy(env, 10)
     #self.logger.write('Success Rate', success_rate, e)
     
     print(" " * 80 + "\r" + "---------------------------------------")
