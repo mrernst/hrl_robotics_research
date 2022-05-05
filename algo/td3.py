@@ -177,7 +177,7 @@ class TD3Controller(object):
 
         # check_??
         state = torch.cat([state, goal], 1).to(device)
-        next_state = torch.cat([next_state, goal], 1).to(device)
+        next_state = torch.cat([next_state, next_goal], 1).to(device)
 
         with torch.no_grad():
             # Select action according to policy and add clipped noise
@@ -216,6 +216,7 @@ class TD3Controller(object):
             self.curr_train_metrics['critic/gradients/norm'] = cr_gr_norm
             self.curr_train_metrics['critic/loss'] = critic_loss
             self.curr_train_metrics['td_error'] = td_error
+            self.curr_train_metrics['reward'] = reward.mean()
 
         #         # tensorboard_writer.add_histogram(f'{self.name}/value/critic_weights',(torch.cat([p.flatten() for p in self.critic.parameters()])).detach().numpy(), self.total_it)
 
@@ -363,13 +364,13 @@ class HighLevelController(TD3Controller):
         goal_shape = (new_batch_sz, self.action_dim)
         
         pred_actions = np.zeros((ncands, new_batch_sz) + low_action_dim)
-        
-        for c in range(ncands):
-            subgoal = candidates[:, c]
-            candidate = (subgoal + low_states[:, 0, :self.action_dim])[:, None] - low_states[:, :, :self.action_dim]
-            candidate = candidate.reshape(*goal_shape)
-            #print(pred_actions.shape[1:])
-            pred_actions[c] = low_con.policy(torch.tensor(observations).float(), torch.tensor(candidate).float()).reshape(pred_actions.shape[1:])
+        with torch.no_grad():
+            for c in range(ncands):
+                subgoal = candidates[:, c]
+                candidate = (subgoal + low_states[:, 0, :self.action_dim])[:, None] - low_states[:, :, :self.action_dim] #?
+                candidate = candidate.reshape(*goal_shape)
+                #print(pred_actions.shape[1:])
+                pred_actions[c] = low_con.policy(torch.tensor(observations).float(), torch.tensor(candidate).float()).reshape(pred_actions.shape[1:])
         
         difference = (pred_actions - true_low_actions)
         # difference = np.where(difference != -np.inf, difference, 0)
