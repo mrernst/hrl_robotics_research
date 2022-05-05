@@ -11,81 +11,81 @@ import sys
 sys.path.append('../')
 from gym.envs.registration import register
 import gym
-from env.bitflip import BitFlipEnv
-from env.fourroom import FourRoom, FourRoom2, FourRoom3, FourRoom4
-from env.mountaincar import MountainCarEnv
-from env.plane import NaivePlane, NaivePlane2, NaivePlane3, NaivePlane4, NaivePlane5
+#from env.bitflip import BitFlipEnv
+#from env.fourroom import FourRoom, FourRoom2, FourRoom3, FourRoom4
+#from env.mountaincar import MountainCarEnv
+#from env.plane import NaivePlane, NaivePlane2, NaivePlane3, NaivePlane4, NaivePlane5
+#from env.nchain import NChainEnv
 from env.goal_plane_env import GoalPlane
-from env.nchain import NChainEnv
 
-register(
-    id='Bitflip-v0',
-    entry_point='env.bitflip:BitFlipEnv',
-    kwargs={'num_bits': 11},
-    max_episode_steps=200,
-    reward_threshold=100.0,
-    nondeterministic=False,
-)
-
-N = 64
-register(
-    id='NChain-v1',
-    entry_point='env.nchain:NChainEnv',
-    kwargs={'n': N,
-            'slip': 0.1,
-            },
-    max_episode_steps=N+10,
-)
-
-register(
-    id='FourRoom-v0',
-    entry_point='env.fourroom:FourRoom',
-    kwargs={'goal_type': 'fix_goal'},
-    max_episode_steps=200,
-    reward_threshold=100.0,
-    nondeterministic=False,
-)
-
-register(
-    id='FourRoom-v1',
-    entry_point='env.fourroom:FourRoom2',
-    kwargs={'goal_type': 'fix_goal'},
-    max_episode_steps=200,
-    reward_threshold=100.0,
-    nondeterministic=False,
-)
-
-register(
-    id='FourRoom-v2',
-    entry_point='env.fourroom:FourRoom3',
-    kwargs={'goal_type': 'fix_goal'},
-    max_episode_steps=200,
-    reward_threshold=100.0,
-    nondeterministic=False,
-)
-
-register(
-    id='FourRoom-v4',
-    entry_point='env.fourroom:FourRoom4',
-    kwargs={'goal_type': 'fix_goal'},
-    max_episode_steps=200,
-    reward_threshold=100.0,
-    nondeterministic=False,
-)
-
-register(
-    id='mcar-v0',
-    entry_point='env.mountaincar:MountainCarEnv',
-    kwargs={'goal_dim': 1},
-    max_episode_steps=200,
-    reward_threshold=100.0,
-    nondeterministic=False,
-)
-
-register(
-    id='Plane-v0',
-    entry_point='env.plane:NaivePlane5',
-)
+# register(
+#     id='Bitflip-v0',
+#     entry_point='env.bitflip:BitFlipEnv',
+#     kwargs={'num_bits': 11},
+#     max_episode_steps=200,
+#     reward_threshold=100.0,
+#     nondeterministic=False,
+# )
+# 
+# N = 64
+# register(
+#     id='NChain-v1',
+#     entry_point='env.nchain:NChainEnv',
+#     kwargs={'n': N,
+#             'slip': 0.1,
+#             },
+#     max_episode_steps=N+10,
+# )
+# 
+# register(
+#     id='FourRoom-v0',
+#     entry_point='env.fourroom:FourRoom',
+#     kwargs={'goal_type': 'fix_goal'},
+#     max_episode_steps=200,
+#     reward_threshold=100.0,
+#     nondeterministic=False,
+# )
+# 
+# register(
+#     id='FourRoom-v1',
+#     entry_point='env.fourroom:FourRoom2',
+#     kwargs={'goal_type': 'fix_goal'},
+#     max_episode_steps=200,
+#     reward_threshold=100.0,
+#     nondeterministic=False,
+# )
+# 
+# register(
+#     id='FourRoom-v2',
+#     entry_point='env.fourroom:FourRoom3',
+#     kwargs={'goal_type': 'fix_goal'},
+#     max_episode_steps=200,
+#     reward_threshold=100.0,
+#     nondeterministic=False,
+# )
+# 
+# register(
+#     id='FourRoom-v4',
+#     entry_point='env.fourroom:FourRoom4',
+#     kwargs={'goal_type': 'fix_goal'},
+#     max_episode_steps=200,
+#     reward_threshold=100.0,
+#     nondeterministic=False,
+# )
+# 
+# register(
+#     id='mcar-v0',
+#     entry_point='env.mountaincar:MountainCarEnv',
+#     kwargs={'goal_dim': 1},
+#     max_episode_steps=200,
+#     reward_threshold=100.0,
+#     nondeterministic=False,
+# )
+# 
+# register(
+#     id='Plane-v0',
+#     entry_point='env.plane:NaivePlane5',
+# )
 
 register(
     id='GoalPlane-v0',
