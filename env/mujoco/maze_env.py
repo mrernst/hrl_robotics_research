@@ -461,6 +461,34 @@ class MazeEnv(gym.Env):
                     conaffinity="1",
                     rgba="0.0 1.0 0.0 0.5"
                 )
+            # 
+            # # default subgoal is just the final goal
+            # subgoal = [0.,0.]
+            # size_scaling = self.MAZE_SIZE_SCALING
+            # subgoal_x, subgoal_y = subgoal[0], subgoal[1]
+            # # remove the original goal
+            # try:
+            #     self.worldbody.remove(self.subgoal_element)
+            #     print('success')
+            # except AttributeError:
+            #     pass
+            # # offset all coordinates so that robot starts at the origin
+            # self.subgoal_element = \
+            #     ET.SubElement(
+            #         self.worldbody, "geom",
+            #         name="subgoal_%d_%d" % (subgoal_x, subgoal_y),
+            #         pos="%f %f %f" % (subgoal_x,
+            #                           subgoal_y,
+            #                           self.MAZE_HEIGHT / 2 * size_scaling),
+            #         size="%f %f %f" % (0.1 * size_scaling,  # smaller than the block to prevent collision
+            #                            0.1 * size_scaling,
+            #                            self.MAZE_HEIGHT / 2 * size_scaling),
+            #         type="box",
+            #         material="",
+            #         contype="1",
+            #         conaffinity="1",
+            #         rgba="1.0 1.0 0.0 0.5"
+            #     )
             # Note: running the lines below will make the robot position wrong! (because the graph is rebuilt)
             torso = self.tree.find(".//body[@name='torso']")
             geoms = torso.findall(".//geom")
