@@ -25,8 +25,8 @@ from collections import OrderedDict
 class SubgoalActionSpace(object):
     def __init__(self, dim):
         limits = np.array(
-            # [-10, -10, -0.5, 
-            [-4, -4, -0.5, 
+            [-10, -10, -0.5, 
+            #[-4, -4, -0.5, 
             -1, -1, -1, -1,
             -0.5, -0.3, -0.5, -0.3, -0.5, -0.3, -0.5, -0.3])
         self.shape = (dim,1)
