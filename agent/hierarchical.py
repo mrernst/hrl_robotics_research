@@ -153,31 +153,32 @@ class HiroAgent(Agent):
         self.start_timesteps = start_timesteps
     
     def step(self, s, env, step, global_step=0, explore=False):
-        ## Lower Level Controller
-        if explore:
-            # Take random action for start_timesteps
-            if global_step < self.start_timesteps:
-                a = env.action_space.sample()
+        with torch.no_grad():
+            ## Lower Level Controller
+            if explore:
+                # Take random action for start_timesteps
+                if global_step < self.start_timesteps:
+                    a = env.action_space.sample()
+                else:
+                    a = self._choose_action_with_noise(s, self.sg)
             else:
-                a = self._choose_action_with_noise(s, self.sg)
-        else:
-            a = self._choose_action(s, self.sg)
-    
-        # Take action
-        obs, r, done, _ = env.step(a)
-        n_s = obs['observation']
-    
-        ## Higher Level Controller
-        # Take random action for start_training steps
-        if explore:
-            if global_step < self.start_timesteps:
-                n_sg = self.subgoal.action_space.sample()
-            else:
-                n_sg = self._choose_subgoal_with_noise(step, s, self.sg, n_s)
-        else:
-            n_sg = self._choose_subgoal(step, s, self.sg, n_s)
+                a = self._choose_action(s, self.sg)
         
-        self.n_sg = n_sg
+            # Take action
+            obs, r, done, _ = env.step(a)
+            n_s = obs['observation']
+        
+            ## Higher Level Controller
+            # Take random action for start_training steps
+            if explore:
+                if global_step < self.start_timesteps:
+                    #n_sg = self.subgoal.action_space.sample()
+                    n_sg = self._sample_random_subgoal(step, s, self.sg, n_s)
+                else:
+                    n_sg = self._choose_subgoal_with_noise(step, s, self.sg, n_s)
+            else:
+                n_sg = self._choose_subgoal(step, s, self.sg, n_s)
+            self.n_sg = n_sg
     
         return a, r, n_s, done
     
@@ -225,6 +226,14 @@ class HiroAgent(Agent):
     
         return losses, td_errors
     
+    def _sample_random_subgoal(self, step, s, sg, n_s):
+        if step % self.buffer_freq == 0: # Should be zero
+            sg = self.subgoal.action_space.sample()
+        else:
+            sg = self.subgoal_transition(s, sg, n_s)
+        
+        return sg
+    
     def _choose_action_with_noise(self, s, sg):
         return self.low_con.policy_with_noise(s, sg)
     
@@ -247,6 +256,41 @@ class HiroAgent(Agent):
     
         return sg
     
+    def _evaluate_low(self, state, last_state, sg, last_subgoal):
+        """
+        evaluate how the current low level agent
+        is doing with following subgoals.
+        """
+        desired = np.array(last_state[:sg.shape[0]]) + np.array(last_subgoal[:sg.shape[0]])
+        actual = np.array(state[:sg.shape[0]])
+        # get difference between where we want to go and what was actually reached
+        # this tests the effectiveness of the LL agent
+        
+        # difference in euclidean space
+        self.low_con.curr_train_metrics['state_reached_diff'] = np.linalg.norm(actual - desired)
+        
+        # get directional diff
+        followed_subgoal = np.array(state[:sg.shape[0]]) - np.array(last_state[:sg.shape[0]])
+        
+        reshaped_last_subgoal = np.array(last_subgoal[:sg.shape[0]]).reshape(1, -1)
+        reshaped_followed_subgoal = followed_subgoal.reshape(1, -1)
+        self.low_con.curr_train_metrics['state_reached_direction_diff'] = torch.nn.CosineSimilarity(reshaped_followed_subgoal,
+            reshaped_last_subgoal)[0][0]
+        
+        # see difference in subgoals
+        if self.subgoal_position is None:
+            self.subgoal_position = np.array(sg[:sg.shape[0]])
+        else:
+            self.prev_subgoal_position = self.subgoal_position
+            self.subgoal_position = np.array(sg[:sg.shape[0]])
+            # from the difference, compute magnitude and direction
+            self.low_con.curr_train_metrics['subgoals_mag_diff'] = np.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
+        
+            reshaped_prev_subgoal_position = self.prev_subgoal_position.reshape(1, -1)
+            reshaped_subgoal_position = self.subgoal_position.reshape(1, -1)
+            self.low_con.curr_train_metrics['subgoals_direction_diff'] = torch.nn.CosineSimilarity(reshaped_subgoal_position,
+                reshaped_prev_subgoal_position)[0][0]
+
     def subgoal_transition(self, s, sg, n_s):
         """
         subgoal transition function, provided as input to the low
@@ -261,21 +305,23 @@ class HiroAgent(Agent):
         subgoals assigned to it.
         """
         abs_s = s[:sg.shape[0]] + sg
-        return -np.sqrt(np.sum((abs_s - n_s[:sg.shape[0]])**2))
+        rew = -np.linalg.norm(abs_s - n_s[:sg.shape[0]], 2)
+        return rew
+        #return -np.sqrt(np.sum((abs_s - n_s[:sg.shape[0]])**2))
     
     def end_step(self):
         self.episode_subreward += self.sr
         self.sg = self.n_sg
     
     def end_episode(self, episode, logger=None):
-        if logger: 
-            # log
-            #logger.write('reward/Intrinsic Reward', self.episode_subreward, episode)
-            logger.add_scalar(
-            'training/intrinsic_reward', self.episode_subreward, episode)
-            # Save Model
-            if _is_update(episode, self.model_save_freq):
-                self.save(episode=episode)
+        # if logger: 
+        #     # log
+        #     #logger.write('reward/Intrinsic Reward', self.episode_subreward, episode)
+        #     logger.add_scalar(
+        #     'training/intrinsic_reward', self.episode_subreward, episode)
+        # Save Model
+        if _is_update(episode, self.model_save_freq):
+            self.save(episode=episode)
     
         self.episode_subreward = 0
         self.sr = 0
@@ -288,86 +334,6 @@ class HiroAgent(Agent):
     def load(self, episode):
         self.low_con.load(episode)
         self.high_con.load(episode)
-
-# class HiroAgent(object):
-#     """
-#     Hierarchical Agent HIRO
-#     """
-# 
-#     def __init__(self, action_dim, sub_algorithm, meta_algorithm, replay_buffer, c_timesteps):
-#         self.action_dim = action_dim
-#         self.sub_algorithm = sub_algorithm
-#         self.meta_algorithm = meta_algorithm
-#         self.replaybuffer = replay_buffer
-#         self.evaluations = []
-# 
-#         # c is the internal timescale for sampling subgoals
-#         self._counter = c_timesteps
-# 
-#     def step(self, state, max_action, noise):
-#         """
-#         Select according to policy with random noise
-#         """
-# 
-#         action = (
-#             self.algorithm.select_action(np.array(state))
-#             + np.random.normal(0, max_action * noise, size=self.action_dim)
-#         ).clip(-max_action, max_action)
-# 
-#         return action
-# 
-#     def add_to_memory(self, state, action, next_state, reward, done):
-#         self.replaybuffer.add(None, None, state, action,
-#                               next_state, reward, done)
-# 
-#     def learn(self, batch_size):
-#         self.algorithm.train(self.replaybuffer, batch_size)
-#         pass
-# 
-#     def reset(self):
-#         pass
-# 
-#     def eval_policy(self, env_name, seed, eval_episodes=10):
-#         """
-#         Runs policy for X episodes and returns average reward
-#         A fixed seed is used for the eval environment
-#         """
-#         eval_env = gym.make(env_name)
-#         eval_env.seed(seed + 100)
-# 
-#         avg_reward = 0.
-#         for _ in range(eval_episodes):
-#             state, done = eval_env.reset(), False
-#             state = get_obs_array(state)
-#             while not done:
-#                 action = self.algorithm.select_action(np.array(state))
-#                 state, reward, done, _ = eval_env.step(action)
-#                 state = get_obs_array(state)
-# 
-#                 avg_reward += reward
-# 
-#         avg_reward /= eval_episodes
-#         self.evaluations.append(avg_reward)
-#         return avg_reward
-# 
-#     def create_policy_eval_video(self, env_name, seed, filename, eval_episodes=15, fps=60):
-#         eval_env = gym.make(env_name)
-#         eval_env.seed(seed + 100)
-# 
-#         filename = filename + ".mp4"
-#         with imageio.get_writer(filename, fps=fps) as video:
-#             for _ in range(eval_episodes):
-#                 state, done = eval_env.reset(), False
-#                 state = get_obs_array(state)
-#                 video.append_data(eval_env.unwrapped.render(
-#                     mode='rgb_array').copy())
-#                 while not done:
-#                     action = self.algorithm.select_action(np.array(state))
-#                     state, reward, done, _ = eval_env.step(action)
-#                     state = get_obs_array(state)
-#                     video.append_data(eval_env.unwrapped.render(
-#                         mode='rgb_array').copy())
-#         pass
 
 
 # _____________________________________________________________________________
