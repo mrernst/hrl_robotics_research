@@ -171,7 +171,7 @@ class TD3Controller(object):
         var = torch.ones(actions.size()).to(device)
         #expl_noise = self.expl_noise - (self.expl_noise/1200) * (self.total_it//10000)
         #self.actor.max_action*self.expl_noise*var
-        return torch.normal(mean, self.expl_noise*var)
+        return torch.normal(mean, self.actor.max_action*self.expl_noise*var)
 
     def _train(self, state, goal, action, reward, next_state, next_goal, not_done):
         self.total_it += 1
