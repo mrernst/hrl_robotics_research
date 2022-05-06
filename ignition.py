@@ -35,7 +35,7 @@ def main(_argv):
                         joblib_n_jobs=JOBLIB_PARALLEL_JOBS,
                         n_cores=JOBLIB_PARALLEL_JOBS * 1,
                         memory=5000,
-                        days=1,
+                        days=3,
                         hours=0,
                         minutes=0,
                         seconds=0,
