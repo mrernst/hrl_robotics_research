@@ -75,7 +75,7 @@ def get_config():
 					# Learning rate of the actor
 					'actor_lr': 0.0001, #0.0001
 					# Learning rate of the critic
-					'critic_lr': 0.001, #0.001
+					'critic_lr': 0.0001, #0.001
 					# Hidden layer size of the actor
 					'actor_hidden_layers': [256, 256],
 					# Hidden layer size of the critic
@@ -102,7 +102,7 @@ def get_config():
 					# Learning rate of the actor
 					'actor_lr': 0.0001, #0.0001
 					# Learning rate of the critic
-					'critic_lr': 0.001, #0.001
+					'critic_lr': 0.01, #0.001
 					# Hidden layer size of the actor
 					'actor_hidden_layers': [256, 256],
 					# Hidden layer size of the critic
