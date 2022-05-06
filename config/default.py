@@ -57,7 +57,7 @@ def get_config():
 				# sub agent configuration
 				'sub': {
 					# Std of Gaussian exploration noise
-					'expl_noise': 1.0, #0.1, #1.0,#0.1,
+					'expl_noise': 0.0625, #sub agent has +-16 actionspace
 					# Buffer size
 					'buffer_size': int(2e5),#int(1e6),
 					# Batch size for both actor and critic
@@ -84,7 +84,7 @@ def get_config():
 				# meta agent configuration
 				'meta': {
 					# Std of Gaussian exploration noise
-					'expl_noise': 1.0,#1.0,#0.1,
+					'expl_noise': 0.1, #meta action has +-10 space
 					# Buffer size
 					'buffer_size': int(2e5), #int(1e6),
 					# Batch size for both actor and critic
