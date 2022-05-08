@@ -127,6 +127,8 @@ class TD3Controller(object):
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(), lr=critic_lr)
+        # Huber loss does not punish a noisy large gradient.
+        self.critic_loss_fn = F.huber_loss #F.mse_loss
 
         self.model_path = model_path
         # parameters
@@ -171,7 +173,7 @@ class TD3Controller(object):
         var = torch.ones(actions.size()).to(device)
         #expl_noise = self.expl_noise - (self.expl_noise/1200) * (self.total_it//10000)
         #self.actor.max_action*self.expl_noise*var
-        return torch.normal(mean, self.actor.max_action*self.expl_noise*var)
+        return torch.normal(mean, self.expl_noise*var)
 
     def _train(self, state, goal, action, reward, next_state, next_goal, not_done):
         self.total_it += 1
@@ -200,8 +202,8 @@ class TD3Controller(object):
         current_Q1, current_Q2 = self.critic(state, action)
 
         # Compute critic loss
-        critic_loss = F.mse_loss(current_Q1, target_Q) + \
-            F.mse_loss(current_Q2, target_Q)
+        critic_loss =  self.critic_loss_fn(current_Q1, target_Q) + \
+           self.critic_loss_fn(current_Q2, target_Q)
 
         # Optimize the critic
         self.critic_optimizer.zero_grad()
