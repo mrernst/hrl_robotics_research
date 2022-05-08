@@ -78,7 +78,8 @@ def main(_argv):
         else:
             launcher.add_experiment(**{
                 'config.agent.agent_type': at,
-                'config.main.env_name': 'PointMaze1-v0'
+                'config.main.env_name': 'PointMaze1-v0',
+                'config.agent.subgoal_dim': 3,
             })
     
     launcher.run(LOCAL, TEST)
