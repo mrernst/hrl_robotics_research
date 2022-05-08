@@ -269,7 +269,7 @@ def training_loop(
             logger.log_episode()
 
         # Evaluate agent
-        if (t + 1) % main_cnf.eval_freq == 0:
+        if (t + 1) % main_cnf.eval_freq == 0 and t > main_cnf.start_timesteps:
             mean_eval_reward, success_rate = evaluate(t, env, agent)
         
             # log evaluation results
