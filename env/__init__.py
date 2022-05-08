@@ -82,10 +82,11 @@ from env.goal_plane_env import GoalPlane
 #     nondeterministic=False,
 # )
 # 
-# register(
-#     id='Plane-v0',
-#     entry_point='env.plane:NaivePlane5',
-# )
+register(
+    id='Plane-v0',
+    entry_point='env.plane:NaivePlane5',
+)
+
 
 register(
     id='GoalPlane-v0',
