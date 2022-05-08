@@ -213,6 +213,16 @@ class NaivePlane5(PlaneBase):
                            R, is_render=is_render, size=size),
 
 
+class NaivePlane6(PlaneBase):
+    # four rectangle
+    def __init__(self, is_render=False, R=300, size=1024):
+        PlaneBase.__init__(self,
+                           [
+                               # np.array([[0, 1. / 3], [2. / 3, 2. / 3]]),
+                           ],
+                           R, is_render=is_render, size=size),
+
+
 if __name__ == '__main__':
     env = NaivePlane5()
     obs = env.reset()
