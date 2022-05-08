@@ -20,6 +20,7 @@ import imageio
 import base64
 
 from gym.wrappers.monitoring import video_recorder
+import glfw
 
 # utilities
 # -----
@@ -103,6 +104,11 @@ class Agent(object):
 					success += 1 if error <=5 else 0
 					# this is not suited for every environment, distance should be adapted
 					self.end_episode(e)
-	
+					if hasattr(env, 'viewer') and render:
+						v = env.viewer
+						#env.viewer = None
+						glfw.destroy_window(v.window)
+						#del v
+
 		env.evaluate = False
 		return np.array(rewards), success/eval_episodes
