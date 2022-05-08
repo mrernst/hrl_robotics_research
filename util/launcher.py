@@ -31,7 +31,7 @@ class Launcher(object):
 
     def __init__(self, exp_name, python_file, n_exps, n_cores=1, memory=2000,
                  days=0, hours=24, minutes=0, seconds=0,
-                 project_name=None, base_dir=None, joblib_n_jobs=None, conda_env=None, reservation=None, gres=None, partition=None, begin=None,
+                 project_name=None, base_dir=None, joblib_n_jobs=None, conda_env=None, reservation=None, gres=None, partition=None, begin=None, mail=None,
                  use_timestamp=False, use_underscore_argparse=False, max_seeds=10000):
         """
         Constructor.
@@ -75,6 +75,7 @@ class Launcher(object):
         self._gres = gres
         self._partition = partition
         self._begin = begin
+        self._mail = mail
 
         self._experiment_list = list()
         self._default_params = dict()
@@ -118,6 +119,7 @@ class Launcher(object):
         partition_option = ''
         begin_option = ''
         gres_option = ''
+        mail_option = ''
 
         if self._project_name:
             project_name_option = '#SBATCH -A ' + self._project_name + '\n'
@@ -131,7 +133,10 @@ class Launcher(object):
         if self._reservation:
             print(self._reservation)
             gres_option += '#SBATCH --reservation=' + str(self._reservation) + '\n'
-
+        if self._mail:
+            print(self._mail)
+            mail_option += '#SBATCH --mail-type=END' + '\n'
+            mail_option += '#SBATCH --mail-user=' + str(self._mail) + '\n'
         joblib_seed = ''
         if self._joblib_n_jobs is not None:
             joblib_seed = f"""\
@@ -192,7 +197,7 @@ fi
 # SLURM Configurations
 
 # Optional parameters
-{project_name_option}{partition_option}{begin_option}{gres_option}
+{project_name_option}{partition_option}{begin_option}{gres_option}{mail_option}
 # Mandatory parameters
 #SBATCH -J {self._exp_name}
 #SBATCH -a 0-{self._n_exps - 1 if self._joblib_n_jobs is None else self._n_exps // self._joblib_n_jobs}

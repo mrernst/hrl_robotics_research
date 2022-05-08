@@ -21,7 +21,7 @@ from ml_collections.config_flags import config_flags
 def main(_argv):
     print(FLAGS.config)
     LOCAL = False
-    TEST = False
+    TEST = True
     USE_CUDA = True
     
     JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
@@ -44,6 +44,7 @@ def main(_argv):
                         # reservation='triesch-shared',
                         # gres='gpu:rtx2080ti:1' if USE_CUDA else None,
                         gres='gpu:rtx2070super:1' if USE_CUDA else None,
+                        mail='mernst@fias.uni-frankfurt.de',
                         use_timestamp=True,
                         use_underscore_argparse=True
                         )
