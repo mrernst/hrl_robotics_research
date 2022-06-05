@@ -34,6 +34,8 @@ def get_config():
 				'start_timesteps': 25e3,
 				# How often (time steps) we evaluate
 				'eval_freq': 1e4,
+				# How often (time steps) we save an eval. video
+				'eval_video_freq': 1e5,
 				# Max time steps to run environment
 				'max_timesteps': 10e6,
 				# Save model and optimizer parameters
