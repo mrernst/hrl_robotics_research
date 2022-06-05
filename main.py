@@ -34,9 +34,9 @@ from agent.hierarchical import HiroAgent
 # custom functions
 # -----
 
-def final_evaluation(main_cnf, timestep, env, agent, results_dir):
-
-    rewards, success_rate = agent.evaluate_policy(env, 15, True, True, -1, results_dir, timestep)
+def final_evaluation(main_cnf, timestep, env, agent, results_dir, to_video=True):
+    # TODO: make this evaluate all testcases with specific modified environments that represent hard testcases, that is the key difference to the evaluate function.
+    rewards, success_rate = agent.evaluate_policy(env, 15, to_video, to_video, -1, results_dir, timestep)
     
     print('mean:{mean:.2f}, \
             std:{std:.2f}, \
@@ -48,8 +48,8 @@ def final_evaluation(main_cnf, timestep, env, agent, results_dir):
                 success=success_rate))
     return np.mean(rewards), success_rate
 
-def evaluate(timestep, env, agent):
-    rewards, success_rate = agent.evaluate_policy(env, 10)
+def evaluate(timestep, env, agent, results_dir, to_video=False):
+    rewards, success_rate = agent.evaluate_policy(env, 10, to_video, to_video, -1, results_dir, timestep + 1)
     #self.logger.write('Success Rate', success_rate, e)
     
     print(" " * 80 + "\r" + "---------------------------------------")
@@ -75,9 +75,10 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     # create filename and results directory
     os.makedirs(results_dir, exist_ok=True)
     # save arguments
-    # TODO make this work with nested dicts
-    #save_args(results_dir, locals(), git_repo_path='./')
-    
+    # save_args(results_dir, locals(), git_repo_path='./')
+    save_args(results_dir, main_cnf.to_dict(), name='main_', git_repo_path='./', seed=seed)
+    save_args(results_dir, agent_cnf.to_dict(), name='agent_', git_repo_path='./', seed=seed)
+
     file_name = f"{agent_cnf.algorithm_name}_{main_cnf.env_name}_{seed}"
     
     print("---------------------------------------")
@@ -270,7 +271,7 @@ def training_loop(
 
         # Evaluate agent
         if (t + 1) % main_cnf.eval_freq == 0 and t > main_cnf.start_timesteps:
-            mean_eval_reward, success_rate = evaluate(t, env, agent)
+            mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir)
         
             # log evaluation results
                 
@@ -294,7 +295,11 @@ def training_loop(
                 )]).detach(), f"agent/{con.name}/actor/weights", logger.writer, t)
                 log_tensor_stats(torch.cat([p.flatten() for p in con.critic.parameters(
                 )]).detach(), f"agent/{con.name}/critic/weights", logger.writer, t)
-                
+        
+        # Save a video of the evaluation
+        if main_cnf.eval_video_freq > 0:
+            if (t + 1) % main_cnf.eval_video_freq == 0 and t > main_cnf.start_timesteps:
+                mean_eval_reward, success_rate = evaluate(t+1, env, agent, results_dir, to_video=True)
 
 
 def main(_argv):
