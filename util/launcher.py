@@ -376,12 +376,28 @@ def add_launcher_base_args(parser):
     return parser
 
 
-def save_args(results_dir, args, git_repo_path=None, seed=None):
+def save_args(results_dir, args, name='', git_repo_path=None,                 seed=None):
     repo = git.Repo(git_repo_path, search_parent_directories=True)
+    args = args.copy()
     args['git_hash'] = repo.head.object.hexsha
     args['git_url'] = repo.remotes.origin.url
 
-    filename = 'args.json' if seed is None else f'args-{seed}.json'
+    filename = f'{name}args.json' if seed is None else f'{name}args-{seed}.json'
+    
+    # check the dict for nested dicts and convert
+    list_of_nestes_dict_keys = []
+    new_dict_entries = {}
+    for k in args.keys():
+      if type(args[k]) == dict:
+        for kk in args[k].keys():
+          new_dict_entries[f'{k}.{kk}'] = args[k][kk]
+        list_of_nestes_dict_keys.append(k)
+    
+    for k in list_of_nestes_dict_keys:
+      del args[k]
+    
+    args = {**args, **new_dict_entries}
+    
     # Save args
     l = []
     for a in args:
