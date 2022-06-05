@@ -473,7 +473,7 @@ class MazeEnv(gym.Env):
             # remove the original goal
             try:
                 self.worldbody.remove(self.subgoal_element)
-                print('success')
+                #print('success')
             except AttributeError:
                 pass
             # offset all coordinates so that robot starts at the origin
@@ -485,9 +485,9 @@ class MazeEnv(gym.Env):
                     pos="%f %f %f" % (subgoal_x,
                                       subgoal_y,
                                       self.MAZE_HEIGHT / 2 * size_scaling),
-                    size="%f %f %f" % (0.025 * size_scaling,  # smaller than the block to prevent collision
-                                       0.025 * size_scaling,
-                                       self.MAZE_HEIGHT / 2 * size_scaling * 0.25),
+                    size="%f %f %f" % (0.1 * size_scaling,  # smaller than the block to prevent collision
+                                       0.1 * size_scaling,
+                                       self.MAZE_HEIGHT / 2 * size_scaling),
                     type="sphere",
                     material="",
                     contype="1",
@@ -536,6 +536,8 @@ class MazeEnv(gym.Env):
         fg_site_id = self.wrapped_env.sim.model.geom_name2id("goal_geom")
         
         if subgoal is not None:
+            if len(subgoal) < 3:
+                subgoal = np.pad(subgoal, (0, 3))
             self.wrapped_env.sim.model.geom_pos[sg_site_id] = subgoal[:3]
         self.wrapped_env.sim.forward()
         pass
