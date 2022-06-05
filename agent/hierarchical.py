@@ -290,6 +290,13 @@ class HiroAgent(Agent):
             reshaped_subgoal_position = self.subgoal_position.reshape(1, -1)
             self.low_con.curr_train_metrics['subgoals_direction_diff'] = torch.nn.CosineSimilarity(reshaped_subgoal_position,
                 reshaped_prev_subgoal_position)[0][0]
+    
+    def _evaluate_high(self):
+        """
+        evaluate how the current high level agent
+        is doing using a perfect low level controller
+        """
+        pass
 
     def subgoal_transition(self, s, sg, n_s):
         """
