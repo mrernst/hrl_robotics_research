@@ -215,7 +215,7 @@ class NaivePlane5(PlaneBase):
 
 class NaivePlane6(PlaneBase):
     # four rectangle
-    def __init__(self, is_render=False, R=300, size=1024):
+    def __init__(self, is_render=False, R=300, size=512):
         PlaneBase.__init__(self,
                            [
                                # np.array([[0, 1. / 3], [2. / 3, 2. / 3]]),
