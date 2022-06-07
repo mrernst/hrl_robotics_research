@@ -50,37 +50,40 @@ def main(_argv):
                         )
     
     
-    # actor_learning_rates = [0.0003, 0.003, 0.03]
-    # critic_learning_rates = [0.0003, 0.003, 0.03]
+    actor_learning_rates = [0.0001, 0.001, 0.01]
+    critic_learning_rates = [0.0001, 0.001, 0.01]
     # #b_c_list = [11, 12]
     # #boolean_list = [True, False]
     # 
     # #launcher.add_default_params(default='b')
     # 
-    # for ac_lr, cr_lr in product(actor_learning_rates, critic_learning_rates):
-    #     # get the default parameters agent and main
-    #     # add experiments directly to the config
-    #     # b/c joblib passes arguments to experiment
-    #     if LOCAL:
-    #         FLAGS.config.agent.sub.actor_lr = ac_lr
-    #         FLAGS.config.agent.sub.critic_lr = cr_lr
-    #         launcher.add_experiment(**FLAGS.config)
-    #     else:
-    #         launcher.add_experiment(**{
-    #             'config.agent.sub.actor_lr': ac_lr,
-    #             'config.agent.sub.critic_lr': cr_lr
-    #         })
-    # 
-    agent_type = ['flat', 'hiro']
-    for at in agent_type:
+    for ac_lr, cr_lr in product(actor_learning_rates, critic_learning_rates):
+        # get the default parameters agent and main
+        # add experiments directly to the config
+        # b/c joblib passes arguments to experiment
         if LOCAL:
-            pass
+            FLAGS.config.agent.sub.actor_lr = ac_lr
+            FLAGS.config.agent.sub.critic_lr = cr_lr
+            launcher.add_experiment(**FLAGS.config)
         else:
             launcher.add_experiment(**{
-                'config.agent.agent_type': at,
+                'config.agent.sub.actor_lr': ac_lr,
+                'config.agent.sub.critic_lr': cr_lr,
+                'config.agent.agent_type': 'hiro',
                 'config.main.env_name': 'PointMaze1-v0',
                 'config.agent.subgoal_dim': 3,
             })
+    
+    # agent_type = ['flat', 'hiro']
+    # for at in agent_type:
+    #     if LOCAL:
+    #         pass
+    #     else:
+    #         launcher.add_experiment(**{
+    #             'config.agent.agent_type': at,
+    #             'config.main.env_name': 'PointMaze1-v0',
+    #             'config.agent.subgoal_dim': 3,
+    #         })
     
     launcher.run(LOCAL, TEST)
     
