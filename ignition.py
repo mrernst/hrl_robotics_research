@@ -27,7 +27,7 @@ def main(_argv):
     JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
     N_SEEDS = 1
     
-    launcher = Launcher(exp_name='xx1',
+    launcher = Launcher(exp_name='xx1_lrates',
                         python_file='main',
                         project_name='luna',
                         base_dir='./save/',
@@ -67,10 +67,11 @@ def main(_argv):
             launcher.add_experiment(**FLAGS.config)
         else:
             launcher.add_experiment(**{
+                'config.main.env_name': 'PointMaze1-v0',
+                'config.main.max_timesteps': 5e6,
                 'config.agent.sub.actor_lr': ac_lr,
                 'config.agent.sub.critic_lr': cr_lr,
                 'config.agent.agent_type': 'hiro',
-                'config.main.env_name': 'PointMaze1-v0',
                 'config.agent.subgoal_dim': 3,
             })
     
