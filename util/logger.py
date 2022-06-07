@@ -112,7 +112,7 @@ def log_tensor_stats(tensor, name=None, writer=None, global_step=None, debug=Fal
     pass
 
 
-
+# TODO: implement the curr training metrics as Average Meters
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
