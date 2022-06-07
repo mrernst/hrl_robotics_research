@@ -50,6 +50,7 @@ def final_evaluation(main_cnf, timestep, env, agent, results_dir, to_video=True)
 
 def evaluate(timestep, env, agent, results_dir, to_video=False):
     rewards, success_rate = agent.evaluate_policy(env, 10, to_video, to_video, -1, results_dir, timestep + 1)
+    # evaluations should maybe be also written to tensorboard
     #self.logger.write('Success Rate', success_rate, e)
     
     print(" " * 80 + "\r" + "---------------------------------------")
@@ -272,7 +273,9 @@ def training_loop(
         # Evaluate agent
         if (t + 1) % main_cnf.eval_freq == 0 and t > main_cnf.start_timesteps:
             mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir)
-        
+            
+            # TODO: All evaluation metrics should be averages with standard deviations, such that one can better judge
+            # progress
             # log evaluation results
                 
             logger.writer.add_scalar(
