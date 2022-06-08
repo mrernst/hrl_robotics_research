@@ -52,7 +52,7 @@ for name_t in all_name:
             max_episode_steps=max_timestep,
         )
 
-        # v1 is the one we use in the main paper
+        # v1 is the default scaling
         register(
             id=name_t + Test + '-v1',
             entry_point='env.mujoco.create_maze_env:create_maze_env',
