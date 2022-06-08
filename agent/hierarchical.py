@@ -317,6 +317,7 @@ class HiroAgent(Agent):
         #return -np.sqrt(np.sum((abs_s - n_s[:sg.shape[0]])**2))
     
     def end_step(self):
+        # TODO: models should be saved after training steps, not episodes
         self.episode_subreward += self.sr
         self.sg = self.n_sg
     
