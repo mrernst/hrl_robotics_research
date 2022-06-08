@@ -213,7 +213,15 @@ def training_loop(
     """
     main experiment loop for training the RL Agent
     """
-
+    # build the corresponding test environment if available
+    try:
+        test_env_name = f"{main_cnf.env_name.split('-')[0]}Test{main_cnf.env_name.split('-')[1]}"
+        test_env = gym.make(main_cnf.env_name)
+    except NameNotFound:
+        print('[Info] No test environment found, using default environment instead')
+        test_env = env
+    
+    
     # reset environment
     obs, done = env.reset(), False
     fg = obs['desired_goal']
@@ -272,16 +280,24 @@ def training_loop(
 
         # Evaluate agent
         if (t + 1) % main_cnf.eval_freq == 0 and t > main_cnf.start_timesteps:
-            mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir)
-            
-            # TODO: All evaluation metrics should be averages with standard deviations, such that one can better judge
-            # progress
             # log evaluation results
+            
+            mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir)
                 
             logger.writer.add_scalar(
-                'evaluation/success_rate', success_rate, t)
+                'evaluation/default_env/success_rate', success_rate, t)
             logger.writer.add_scalar(
-                'evaluation/reward', mean_eval_reward, t)
+                'evaluation/default_env/reward', mean_eval_reward, t)
+            
+            mean_eval_reward, success_rate = evaluate(t, test_env, agent, results_dir)
+                
+            logger.writer.add_scalar(
+                'evaluation/test_env/success_rate', success_rate, t)
+            logger.writer.add_scalar(
+                'evaluation/test_env/reward', mean_eval_reward, t)
+            # TODO: All evaluation metrics should be averages with standard deviations, such that one can better judge
+            # progress
+            
             
             # log general results
             
@@ -302,7 +318,7 @@ def training_loop(
         # Save a video of the evaluation
         if main_cnf.eval_video_freq > 0:
             if (t + 1) % main_cnf.eval_video_freq == 0 and t > main_cnf.start_timesteps:
-                mean_eval_reward, success_rate = evaluate(t+1, env, agent, results_dir, to_video=True)
+                mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir, to_video=True)
 
 
 def main(_argv):
