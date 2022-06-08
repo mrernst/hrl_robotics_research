@@ -110,6 +110,7 @@ class FlatAgent(Agent):
         return self.con.policy_with_noise(s, self.fg)
     
     def end_step(self):
+        # TODO: models should be saved after training steps, not episodes
         pass
     
     def end_episode(self, episode, logger=None):
