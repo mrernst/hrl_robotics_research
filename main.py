@@ -216,9 +216,9 @@ def training_loop(
     # build the corresponding test environment if available
     try:
         test_env_name = f"{main_cnf.env_name.split('-')[0]}Test{main_cnf.env_name.split('-')[1]}"
-        test_env = gym.make(main_cnf.env_name)
-    except NameNotFound:
-        print('[Info] No test environment found, using default environment instead')
+        test_env = gym.make(test_env_name)
+    except gym.error.NameNotFound:
+        print('[INFO] No test environment found, using default environment instead')
         test_env = env
     
     
