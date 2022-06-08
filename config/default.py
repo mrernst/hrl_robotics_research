@@ -40,7 +40,8 @@ def get_config():
 				'max_timesteps': 10e6,
 				# Save model and optimizer parameters
 				'save_model': True,
-				# Save model every n episodes
+				# Save model every n episodes 
+				# TODO: should be n training steps
 				'model_save_freq': 5000,
 				# Load model from file
 				'load_model': False,
