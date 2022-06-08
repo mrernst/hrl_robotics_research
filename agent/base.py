@@ -93,9 +93,9 @@ class Agent(object):
 					self.end_step()
 					if save_video:
 						if hasattr(self, 'sg'):
-							video.append_data(env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array'))
+							video.append_data(env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array', width=720, height=480))
 						else:
-							video.append_data(env.render(mode='rgb_array'))
+							video.append_data(env.render(mode='rgb_array', width=720, height=480))
 				else:
 					error = np.sqrt(np.sum(np.square(fg-s[:fg_dim])))
 					print(" " * 80 + "\r" +
