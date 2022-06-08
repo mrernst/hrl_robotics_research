@@ -102,7 +102,7 @@ class Agent(object):
 					'[Eval] Goal, Curr: (%02.2f, %02.2f, %02.2f, %02.2f)     Error:%.2f'%(fg[0], fg[1], s[0], s[1], error), end='\r')
 					rewards.append(reward_episode_sum)
 					success += 1 if error <=5 else 0
-					# this is not suited for every environment, distance should be adapted
+					# this is not suited for every environment, distance should be adapted for success metric
 					self.end_episode(e)
 					if hasattr(env, 'viewer') and render:
 						v = env.viewer
