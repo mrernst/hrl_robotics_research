@@ -82,7 +82,7 @@ def main(_argv):
         else:
             launcher.add_experiment(**{
                 'config.agent.agent_type': at,
-                'config.main.env_name': 'Antmaze-v1',
+                'config.main.env_name': 'AntMaze-v1',
                 'config.main.max_timesteps': 5e6,
                 # 'config.agent.subgoal_dim': 3,
             })
