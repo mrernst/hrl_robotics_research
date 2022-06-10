@@ -27,7 +27,7 @@ def main(_argv):
     JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
     N_SEEDS = 1
     
-    launcher = Launcher(exp_name='xx1_subgoal15',
+    launcher = Launcher(exp_name='xx1',
                         python_file='main',
                         project_name='luna',
                         base_dir='./save/',
@@ -75,23 +75,24 @@ def main(_argv):
     #             'config.agent.subgoal_dim': 3,
     #         })
     # 
-    # agent_type = ['flat', 'hiro']
-    # for at in agent_type:
-    #     if LOCAL:
-    #         pass
-    #     else:
-    #         launcher.add_experiment(**{
-    #             'config.agent.agent_type': at,
-    #             #'config.main.env_name': 'PointMaze1-v0',
-    #             'config.agent.subgoal_dim': 3,
-    #         })
+    agent_type = ['flat', 'hiro']
+    for at in agent_type:
+        if LOCAL:
+            pass
+        else:
+            launcher.add_experiment(**{
+                'config.agent.agent_type': at,
+                'config.main.env_name': 'Antmaze-v1',
+                'config.main.max_timesteps': 5e6,
+                # 'config.agent.subgoal_dim': 3,
+            })
         
-    launcher.add_experiment(**{
-        'config.agent.agent_type': 'hiro', 
-        'config.main.max_timesteps': 5e6,
-        'config.agent.subgoal_dim': 15,
-        })
-    
+    # launcher.add_experiment(**{
+    #     'config.agent.agent_type': 'hiro', 
+    #     'config.main.max_timesteps': 5e6,
+    #     'config.agent.subgoal_dim': 15,
+    #     })
+    # 
     launcher.run(LOCAL, TEST)
     
 
