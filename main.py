@@ -34,24 +34,14 @@ from agent.hierarchical import HiroAgent
 # custom functions
 # -----
 
-def final_evaluation(main_cnf, timestep, env, agent, results_dir, to_video=True):
-    # TODO: make this evaluate all testcases with specific modified environments that represent hard testcases, that is the key difference to the evaluate function.
-    rewards, success_rate = agent.evaluate_policy(env, 15, to_video, to_video, -1, results_dir, timestep)
-    
-    print('mean:{mean:.2f}, \
-            std:{std:.2f}, \
-            median:{median:.2f}, \
-            success:{success:.2f}'.format(
-                mean=np.mean(rewards), 
-                std=np.std(rewards), 
-                median=np.median(rewards), 
-                success=success_rate))
-    return np.mean(rewards), success_rate
+def evaluate_extended(timestep, env, agent, results_dir, to_video=False):
+    # TODO: implement a function that additionally visualizes
+    # goal and state spaces and is able to render a video alongside
+    # the agent acting in the environment
+    pass
 
 def evaluate(timestep, env, agent, results_dir, to_video=False):
     rewards, success_rate = agent.evaluate_policy(env, 10, to_video, to_video, -1, results_dir, timestep + 1)
-    # evaluations should maybe be also written to tensorboard
-    #self.logger.write('Success Rate', success_rate, e)
     
     print(" " * 80 + "\r" + "---------------------------------------")
     print('Total T: {timestep}, Reward - mean: {mean:.2f}, std: {std:.2f}, median: {median:.2f}, success:{success:.2f}'.format(
@@ -194,7 +184,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
         
             agent.load(main_cnf.load_episode)
             print("---------------------------------------")
-        _, _ = final_evaluation(main_cnf, main_cnf.max_timesteps, env, agent, results_dir)
+        _, _ = evaluate(main_cnf.max_timesteps, env, agent, results_dir, to_video=True)
     
      
     # space for post experiment analysis
@@ -215,7 +205,7 @@ def training_loop(
     """
     # build the corresponding test environment if available
     try:
-        test_env_name = f"{main_cnf.env_name.split('-')[0]}Test{main_cnf.env_name.split('-')[1]}"
+        test_env_name = main_cnf.env_name.split('-')[0]+'Test-' + main_cnf.env_name.split('-')[1]
         test_env = gym.make(test_env_name)
     except gym.error.NameNotFound:
         print('[INFO] No test environment found, using default environment instead')
