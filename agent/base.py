@@ -16,16 +16,18 @@ import argparse
 import os
 import sys
 
+
 import imageio
 import base64
+import glfw
 
 from gym.wrappers.monitoring import video_recorder
-import glfw
 
 # utilities
 # -----
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
+from util.utils import darken
 
 class Agent(object):
 	"""
@@ -59,6 +61,8 @@ class Agent(object):
 			#						write_upon_reset=True, force=True, resume=True, mode='evaluation')
 			os.makedirs(f'{results_dir}/video/', exist_ok = True)
 			video = imageio.get_writer(f'{results_dir}/video/t{timestep}.mp4', fps=30)
+			ghostimage_list = []
+			ghost_every = 10
 			render = False
 	
 		success = 0
@@ -93,15 +97,29 @@ class Agent(object):
 					self.end_step()
 					if save_video:
 						if hasattr(self, 'sg'):
-							video.append_data(env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array', width=720, height=480))
+							videoframe = env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array', width=720, height=480)
+							video.append_data(videoframe)
+						if step%ghost_every==0:
+							ghostimage_list.append(np.dstack([videoframe, np.ones(videoframe.shape[:2])*255]).astype(float))
 						else:
-							video.append_data(env.render(mode='rgb_array', width=720, height=480))
+							videoframe = env.render(mode='rgb_array', width=720, height=480)
+							video.append_data(videoframe)
 				else:
 					error = np.sqrt(np.sum(np.square(fg-s[:fg_dim])))
 					print(" " * 80 + "\r" +
 					'[Eval] Goal, Curr: (%02.2f, %02.2f, %02.2f, %02.2f)     Error:%.2f'%(fg[0], fg[1], s[0], s[1], error), end='\r')
 					rewards.append(reward_episode_sum)
 					success += 1 if error <=5 else 0
+					
+					if save_video:
+						# create ghost image
+						gimg = ghostimage_list[0]
+						for i in range(len(ghostimage_list)-1):
+							opacity = 0.7
+							gimg = darken(gimg, ghostimage_list[i+1], opacity)
+						plt.imshow(gimg)
+						plt.show()
+						ghostimage_list = []
 					# this is not suited for every environment, distance should be adapted for success metric
 					self.end_episode(e)
 					if hasattr(env, 'viewer') and render:
