@@ -99,8 +99,11 @@ if __name__ == "__main__":
             while True:
                 plt.clt()
                 plt.cld()
-                for k1 in reverse_dict_of_keys[k2]:
-                    plt.plot(df[k1][k2].values, label=k1)
+                for i, k1 in enumerate(reverse_dict_of_keys[k2]):
+                    sets_of_k1 = [set(k1.split('/')) for k1 in reverse_dict_of_keys[k2]]
+                    sets_of_k1_without_i = sets_of_k1.copy()
+                    _ = sets_of_k1_without_i.pop(i)
+                    plt.plot(df[k1][k2].values, label='/'.join(sets_of_k1[i].difference(*sets_of_k1_without_i)))
                 plt.show()
                 
                 plt.sleep(args.rate)
@@ -111,8 +114,11 @@ if __name__ == "__main__":
             #plot all
             for k2 in reverse_dict_of_keys.keys():
                 if len(reverse_dict_of_keys[k2]) > 1 and ('loss' in k2 or 'reward' in k2 or 'success' in k2):
-                    for k1 in reverse_dict_of_keys[k2]:
-                        plt.plot(df[k1][k2].values, label=k1)
+                    for i, k1 in enumerate(reverse_dict_of_keys[k2]):
+                        sets_of_k1 = [set(k1.split('/')) for k1 in reverse_dict_of_keys[k2]]
+                        sets_of_k1_without_i = sets_of_k1.copy()
+                        _ = sets_of_k1_without_i.pop(i)
+                        plt.plot(df[k1][k2].values, label='/'.join(sets_of_k1[i].difference(*sets_of_k1_without_i)))
                     plt.title(f"{k2}")
                     plt.show()
                     plt.clf()
