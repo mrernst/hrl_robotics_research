@@ -23,7 +23,7 @@ from afterburner import read_multiple_runs, convert_em_to_df
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--logdir", "-d",  default='./', type=str)
+    parser.add_argument("--logdir", "-d",  default='./save/', type=str)
     parser.add_argument("--stream", "-s",  default=False, type=bool)
     parser.add_argument("--rate", "-r", default=30, type=int)
 
@@ -45,9 +45,9 @@ if __name__ == "__main__":
     
     for k1 in df.keys():
         for k2 in df[k1].keys():
-            if 'loss' in k2 or 'reward' in k2:
+            if 'loss' in k2 or 'reward' in k2 or 'success' in k2:
                 plt.plot(df[k1][k2].values)
-                plt.title(f"{k1}_{k2}")
+                plt.title(f"{k2}")
                 plt.show()
                 plt.clf()
     # plt.plot(df['agent']['agent/sub/actor/weights/min'].values, df['training']['step'].values)
