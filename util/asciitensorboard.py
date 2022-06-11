@@ -44,6 +44,14 @@ if __name__ == "__main__":
                         action='store_false')
     parser.set_defaults(present_options=True)
     
+    parser.add_argument('--logscale', '-logy',
+                        dest='logscale',
+                        action='store_true')
+    parser.add_argument('--no-logscale', '-nlogy',
+                        dest='logscale',
+                        action='store_false')
+    parser.set_defaults(logscale=False)
+    
     parser.add_argument('--combine_views', '-c',
                         dest='combine_views',
                         action='store_true')
@@ -74,9 +82,6 @@ if __name__ == "__main__":
     if args.present_options or args.stream:
         # wait on user input
         user_picked_run = let_user_pick(list(df.keys())+['combine views'])
-    #print(df.keys())
-    #print(df['training'].keys())
-    # display plot, go backplaying of options, or stream continuously
     
 
     
@@ -104,6 +109,8 @@ if __name__ == "__main__":
                     sets_of_k1_without_i = sets_of_k1.copy()
                     _ = sets_of_k1_without_i.pop(i)
                     plt.plot(df[k1][k2].values, label='/'.join(sets_of_k1[i].difference(*sets_of_k1_without_i)))
+                    if args.logscale:
+                        plt.yscale("log")
                 plt.show()
                 
                 plt.sleep(args.rate)
@@ -119,6 +126,8 @@ if __name__ == "__main__":
                         sets_of_k1_without_i = sets_of_k1.copy()
                         _ = sets_of_k1_without_i.pop(i)
                         plt.plot(df[k1][k2].values, label='/'.join(sets_of_k1[i].difference(*sets_of_k1_without_i)))
+                        if args.logscale:
+                            plt.yscale("log")
                     plt.title(f"{k2}")
                     plt.show()
                     plt.clf()
@@ -135,6 +144,8 @@ if __name__ == "__main__":
                     plt.clt()
                     plt.cld()
                     plt.plot(df[k1][k2].values)
+                    if args.logscale:
+                        plt.yscale("log")
                     plt.show()
                     
                     plt.sleep(args.rate)
@@ -145,6 +156,8 @@ if __name__ == "__main__":
                 for k2 in df[k1].keys():            
                     if 'loss' in k2 or 'reward' in k2 or 'success' in k2:
                         plt.plot(df[k1][k2].values)
+                        if args.logscale:
+                            plt.yscale("log")
                         plt.title(f"{k2}")
                         plt.show()
                         plt.clf()
@@ -154,6 +167,8 @@ if __name__ == "__main__":
                 for k2 in df[k1].keys():            
                     if 'loss' in k2 or 'reward' in k2 or 'success' in k2:
                         plt.plot(df[k1][k2].values)
+                        if args.logscale:
+                            plt.yscale("log")
                         plt.title(f"{k2}")
                         plt.show()
                         plt.clf()
