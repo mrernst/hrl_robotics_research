@@ -1,19 +1,6 @@
 from gym.envs.registration import register
 import sys
 
-# print("path", sys.argv[0].split('/')[-1], "!!!")
-# if sys.argv[0].split('/')[-1] in ["train_ddpg.py", "visitation_plot.py", "vis_fetch.py"]:
-#     from train_ddpg import args
-# elif sys.argv[0].split('/')[-1] == "train_hier_ddpg.py":
-#     from train_hier_ddpg import args
-# elif sys.argv[0].split('/')[-1] == "train_hier_sac.py":
-#     from train_hier_sac import args
-# elif sys.argv[0].split('/')[-1] == "train_hier_ppo.py":
-#     from train_hier_ppo import args
-# elif sys.argv[0].split('/')[-1] == "train_covering.py":
-#     from train_covering import args
-# else:
-#     raise Exception("Unknown main file !!!")
 
 args_image = False
 # get the arguments from the config file or from the main file?
