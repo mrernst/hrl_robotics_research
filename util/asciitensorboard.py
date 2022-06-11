@@ -45,10 +45,11 @@ if __name__ == "__main__":
     
     for k1 in df.keys():
         for k2 in df[k1].keys():
-            plt.plot(df[k1][k2].values)
-            plt.title(f"{k1}_{k2}")
-            plt.show()
-            plt.clf()
+            if 'loss' in k2 or 'reward' in k2:
+                plt.plot(df[k1][k2].values)
+                plt.title(f"{k1}_{k2}")
+                plt.show()
+                plt.clf()
     # plt.plot(df['agent']['agent/sub/actor/weights/min'].values, df['training']['step'].values)
     # plt.title('agent/sub/actor/weights/min')
     #plt.plot(df['agent']['agent/meta/actor/weights/min'].values)
