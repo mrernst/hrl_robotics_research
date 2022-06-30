@@ -51,12 +51,12 @@ def get_config():
 				'verbose': False,
 			},
 			'agent': {
-				# Agent name (flat or hierarchical)
+				# Agent name (flat or hiro)
 				'agent_type': "flat",
 				# Algorithm name (TD3, or else if implemented)
 				'algorithm_name': "TD3",
 				# Subgoal dimension
-				'subgoal_dim': 15, #3
+				'subgoal_dim': 15,
 				# sub agent configuration
 				'sub': {
 					# Std of Gaussian exploration noise
