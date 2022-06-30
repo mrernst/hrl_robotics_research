@@ -84,6 +84,8 @@ def main(_argv):
                 'config.agent.agent_type': at,
                 'config.main.env_name': 'AntMaze-v1',
                 'config.main.max_timesteps': 5e6,
+                'config.agent.sub.prio_exp_replay': 1,
+                'config.agent.meta.prio_exp_replay': 1,
                 # 'config.agent.subgoal_dim': 3,
             })
         
