@@ -61,6 +61,8 @@ def get_config():
 				'sub': {
 					# Std of Gaussian exploration noise
 					'expl_noise': 1., #sub agent has +-16 actionspace
+					# Prioritized Experience Replay (0 = regular buffers)
+					'prio_exp_replay': 0,
 					# Buffer size
 					'buffer_size': int(2e5),#int(1e6),
 					# Batch size for both actor and critic
@@ -88,6 +90,8 @@ def get_config():
 				'meta': {
 					# Std of Gaussian exploration noise
 					'expl_noise': 1., #meta action has +-10 space
+					# Prioritized Experience Replay (0 = regular buffers)
+					'prio_exp_replay': 0,
 					# Buffer size
 					'buffer_size': int(2e5), #int(1e6),
 					# Batch size for both actor and critic

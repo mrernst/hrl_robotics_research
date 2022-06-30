@@ -109,6 +109,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             model_path=f'{results_dir}/{file_name}',
             model_save_freq=main_cnf.model_save_freq,
             start_timesteps=main_cnf.start_timesteps,
+            prio_exp_replay=agent_cnf.sub.prio_exp_replay,
             buffer_size=agent_cnf.sub.buffer_size,
             batch_size=agent_cnf.sub.batch_size,
             actor_lr=agent_cnf.sub.actor_lr,
@@ -133,6 +134,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             model_save_freq=main_cnf.model_save_freq,
             start_timesteps=main_cnf.start_timesteps,
             # meta agent arguments
+            prio_exp_replay_meta=agent_cnf.meta.prio_exp_replay,
             buffer_size_meta=agent_cnf.meta.buffer_size,
             batch_size_meta=agent_cnf.meta.batch_size,
             actor_lr_meta=agent_cnf.meta.actor_lr,
@@ -149,6 +151,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             train_freq=agent_cnf.meta.train_freq,
             reward_scaling=agent_cnf.meta.reward_scaling,
             # sub agent arguments
+            prio_exp_replay_sub=agent_cnf.sub.prio_exp_replay,
             buffer_size_sub=agent_cnf.sub.buffer_size,
             batch_size_sub=agent_cnf.sub.batch_size,
             actor_lr_sub=agent_cnf.sub.actor_lr,
@@ -188,6 +191,7 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     
      
     # space for post experiment analysis
+    # run functions of the afterburner module
     
     pass
 

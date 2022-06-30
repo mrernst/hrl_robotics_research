@@ -25,7 +25,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from agent.base import Agent
 from algo.td3 import HighLevelController, LowLevelController, TD3Controller
-from util.replay_buffer import LowLevelReplayBuffer, HighLevelReplayBuffer, ReplayBuffer
+from util.replay_buffer import LowLevelReplayBuffer, HighLevelReplayBuffer, LowLevelPERReplayBuffer, HighLevelPERReplayBuffer, ReplayBuffer, PERReplayBuffer
 from util.utils import Subgoal, _is_update
 
 # custom classes
@@ -43,6 +43,7 @@ class HiroAgent(Agent):
         model_save_freq,
         start_timesteps,
         # meta agent arguments
+        prio_exp_replay_meta,
         buffer_size_meta,
         batch_size_meta,
         actor_lr_meta,
@@ -59,6 +60,7 @@ class HiroAgent(Agent):
         train_freq,
         reward_scaling,
         # sub agent arguments
+        prio_exp_replay_sub,
         buffer_size_sub,
         batch_size_sub,
         actor_lr_sub,
@@ -121,24 +123,48 @@ class HiroAgent(Agent):
             )
         
         self.controllers = [self.low_con, self.high_con]
-    
-        self.replay_buffer_sub = LowLevelReplayBuffer(
-            state_dim=state_dim,
-            goal_dim=subgoal_dim,
-            action_dim=action_dim,
-            buffer_size=buffer_size_sub,
-            batch_size=batch_size_sub
-            )
-    
-        self.replay_buffer_meta = HighLevelReplayBuffer(
-            state_dim=state_dim,
-            goal_dim=goal_dim,
-            subgoal_dim=subgoal_dim,
-            action_dim=action_dim,
-            buffer_size=buffer_size_meta,
-            batch_size=batch_size_meta,
-            freq=buffer_freq
-            )
+        
+        if prio_exp_replay_sub:
+            self.replay_buffer_sub = LowLevelPERReplayBuffer(
+                state_dim=state_dim,
+                goal_dim=subgoal_dim,
+                action_dim=action_dim,
+                buffer_size=buffer_size_sub,
+                batch_size=batch_size_sub,
+                )
+            # define type of error by passing an integer
+            self.replay_buffer_sub.per_error_type = prio_exp_replay_sub
+        else:  
+            self.replay_buffer_sub = LowLevelReplayBuffer(
+                state_dim=state_dim,
+                goal_dim=subgoal_dim,
+                action_dim=action_dim,
+                buffer_size=buffer_size_sub,
+                batch_size=batch_size_sub,
+                )
+        
+        if prio_exp_replay_meta:
+            self.replay_buffer_meta = HighLevelPERReplayBuffer(
+                state_dim=state_dim,
+                goal_dim=goal_dim,
+                subgoal_dim=subgoal_dim,
+                action_dim=action_dim,
+                buffer_size=buffer_size_meta,
+                batch_size=batch_size_meta,
+                freq=buffer_freq,
+                )
+            # define type of error by passing an integer
+            self.replay_buffer_meta.per_error_type = prio_exp_replay_meta
+        else:
+            self.replay_buffer_meta = HighLevelReplayBuffer(
+                state_dim=state_dim,
+                goal_dim=goal_dim,
+                subgoal_dim=subgoal_dim,
+                action_dim=action_dim,
+                buffer_size=buffer_size_meta,
+                batch_size=batch_size_meta,
+                freq=buffer_freq,
+                )
     
         self.buffer_freq = buffer_freq
         self.train_freq = train_freq

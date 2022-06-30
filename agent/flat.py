@@ -26,7 +26,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from agent.base import Agent
 from algo.td3 import TD3Controller
-from util.replay_buffer import ReplayBuffer
+from util.replay_buffer import ReplayBuffer, PERReplayBuffer
 from util.utils import _is_update
 
 
@@ -40,6 +40,7 @@ class FlatAgent(Agent):
         model_path,
         model_save_freq,
         start_timesteps,
+        prio_exp_replay,
         buffer_size,
         batch_size,
         actor_lr,
@@ -71,14 +72,25 @@ class FlatAgent(Agent):
             tau=tau
             )
         self.controllers = [self.con]
-    
-        self.replay_buffer = ReplayBuffer(
-            state_dim=state_dim,
-            goal_dim=goal_dim,
-            action_dim=action_dim,
-            buffer_size=buffer_size,
-            batch_size=batch_size
-            )
+        
+        if prio_exp_replay:
+            self.replay_buffer = PERReplayBuffer(
+                state_dim=state_dim,
+                goal_dim=goal_dim,
+                action_dim=action_dim,
+                buffer_size=buffer_size,
+                batch_size=batch_size,
+                )
+            # define type of error by passing an integer
+            self.replay_buffer.per_error_type = prio_exp_replay
+        else:
+            self.replay_buffer = ReplayBuffer(
+                state_dim=state_dim,
+                goal_dim=goal_dim,
+                action_dim=action_dim,
+                buffer_size=buffer_size,
+                batch_size=batch_size
+                )
         self.model_save_freq = model_save_freq
         self.start_timesteps = start_timesteps
     
