@@ -117,8 +117,8 @@ class Agent(object):
 						for i in range(len(ghostimage_list)-1):
 							opacity = 0.7
 							gimg = darken(gimg, ghostimage_list[i+1], opacity)
-						plt.imshow(gimg)
-						plt.show()
+						#plt.imshow(gimg)
+						#plt.show()
 						ghostimage_list = []
 					# this is not suited for every environment, distance should be adapted for success metric
 					self.end_episode(e)
@@ -129,4 +129,5 @@ class Agent(object):
 						#del v
 
 		env.evaluate = False
+		# the function should also return a detailed log of states, subgoals, actions, goals
 		return np.array(rewards), success/eval_episodes
