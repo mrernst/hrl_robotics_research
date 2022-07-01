@@ -111,15 +111,13 @@ class Agent(object):
 					rewards.append(reward_episode_sum)
 					success += 1 if error <=5 else 0
 					
-					if save_video:
-						# create ghost image
-						gimg = ghostimage_list[0]
-						for i in range(len(ghostimage_list)-1):
-							opacity = 0.7
-							gimg = darken(gimg, ghostimage_list[i+1], opacity)
-						#plt.imshow(gimg)
-						#plt.show()
-						ghostimage_list = []
+					# if save_video:
+					# 	# create ghost image
+					# 	gimg = ghostimage_list[0]
+					# 	for i in range(len(ghostimage_list)-1):
+					# 		opacity = 0.7
+					# 		gimg = darken(gimg, ghostimage_list[i+1], opacity)
+					# 	ghostimage_list = []
 					# this is not suited for every environment, distance should be adapted for success metric
 					self.end_episode(e)
 					if hasattr(env, 'viewer') and render:
