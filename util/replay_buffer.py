@@ -104,11 +104,10 @@ class PERReplayBuffer(ReplayBuffer):
         segment = self.tree.total() / size
         
         for i in range(size):
-            # segments are a problem if batchsize if total size is non-dividable
-            # a = segment * i
-            # b = segment * (i + 1)
-            # s = np.random.uniform(a, b)
-            s = np.random.uniform(0, self.tree.total())
+            a = segment * i
+            b = segment * (i + 1)
+            s = np.random.uniform(a, b)
+            # s = np.random.uniform(0, self.tree.total())
             (tree_idx, p, idx) = self.tree.get(s)
             batch_idxs[i] = idx
             tree_idxs[i] = tree_idx
