@@ -64,7 +64,7 @@ def get_config():
 					# Prioritized Experience Replay (0 = regular buffers)
 					'prio_exp_replay': 0,
 					# Buffer size
-					'buffer_size': int(2e5),#int(1e6),
+					'buffer_size': int(2**15),#int(2e5),
 					# Batch size for both actor and critic
 					'batch_size': 256,
 					# Discount factor
@@ -93,7 +93,7 @@ def get_config():
 					# Prioritized Experience Replay (0 = regular buffers)
 					'prio_exp_replay': 0,
 					# Buffer size
-					'buffer_size': int(2e5), #int(1e6),
+					'buffer_size': int(2**15), #int(2e5),
 					# Batch size for both actor and critic
 					'batch_size': 256,
 					# Discount factor
