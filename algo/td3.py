@@ -36,6 +36,11 @@ def get_tensor(z):
     else:
         return torch.FloatTensor(z).to(device)
         
+
+def is_weighted_loss(loss_fn, expected, target, is_weight):
+    is_weight = torch.from_numpy(is_weight).float().to(device)
+    weighted_loss = is_weight * loss_fn(expected, target, reduction='none')
+    return torch.sum(weighted_loss) / torch.numel(weighted_loss)
 # net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
 # net.apply(init_weights)
 
@@ -93,6 +98,7 @@ class Critic(nn.Module):
         q1 = F.relu(self.l2(q1))
         q1 = self.l3(q1)
         return q1
+
 
 
 class TD3Controller(object):
@@ -175,7 +181,7 @@ class TD3Controller(object):
         #self.actor.max_action*self.expl_noise*var
         return torch.normal(mean, self.expl_noise*var)
 
-    def _train(self, state, goal, action, reward, next_state, next_goal, not_done):
+    def _train(self, state, goal, action, reward, next_state, next_goal, not_done, is_weight=None):
         self.total_it += 1
 
         # check_??
@@ -202,8 +208,14 @@ class TD3Controller(object):
         current_Q1, current_Q2 = self.critic(state, action)
 
         # Compute critic loss
-        critic_loss =  self.critic_loss_fn(current_Q1, target_Q) + \
-           self.critic_loss_fn(current_Q2, target_Q)
+        # critic_loss = (self.critic_loss_fn(current_Q1, target_Q, reduction='none') * is_weight).mean() + \
+        #    (self.critic_loss_fn(current_Q2, target_Q, reduction='none') * is_weight).mean()
+        critic_loss = is_weighted_loss(self.critic_loss_fn, current_Q1, target_Q, is_weight) + \
+            is_weighted_loss(self.critic_loss_fn, current_Q2, target_Q, is_weight)
+        #     critic_loss =  self.critic_loss_fn(current_Q1, target_Q) + \
+        #        self.critic_loss_fn(current_Q2, target_Q)
+           
+
 
         # Optimize the critic
         self.critic_optimizer.zero_grad()
@@ -257,7 +269,7 @@ class TD3Controller(object):
     def train(self, replay_buffer):
         state, goal, action, next_state, reward, not_done = replay_buffer.sample()
         
-        losses_and_errors = self._train(state, goal, action, reward, next_state, goal, not_done)
+        losses_and_errors = self._train(state, goal, action, reward, next_state, goal, not_done, replay_buffer.is_weight)
         
         self._update_per_priorities(replay_buffer, losses_and_errors[1]['td_error_'+self.name], next_state, action, reward)
         
@@ -271,8 +283,7 @@ class TD3Controller(object):
         If 2, sample based on the distance between goal and state.
         If 3, sample proportional to the reward of a transition.
         If 4, sample transitions with a reward with a higher probability.
-        If 5, sample inversely to the TD-error. (i.e. we want small TD-errors)
-        N.B. Python doesn't have switch statements...'''
+        If 5, sample inversely to the TD-error. (i.e. we want small TD-errors)'''
         if hasattr(replay_buffer, 'per_error_type'):
             if replay_buffer.per_error_type == 1:
                 error = td_error
@@ -432,7 +443,7 @@ class HighLevelController(TD3Controller):
             actions_arr.cpu().data.numpy())
 
         actions = get_tensor(actions)
-        losses_and_errors = self._train(states, goals, actions, rewards, n_states, goals, not_done)
+        losses_and_errors = self._train(states, goals, actions, rewards, n_states, goals, not_done, replay_buffer.is_weight)
         self._update_per_priorities(replay_buffer, losses_and_errors[1]['td_error_'+self.name], n_states, actions, rewards)
         return losses_and_errors
 
@@ -473,7 +484,7 @@ class LowLevelController(TD3Controller):
 
         states, sgoals, actions, n_states, n_sgoals, rewards, not_done = replay_buffer.sample()
 
-        losses_and_errors = self._train(states, sgoals, actions, rewards, n_states, n_sgoals, not_done)
+        losses_and_errors = self._train(states, sgoals, actions, rewards, n_states, n_sgoals, not_done, replay_buffer.is_weight)
         self._update_per_priorities(replay_buffer, losses_and_errors[1]['td_error_'+self.name], n_states, actions, rewards)
         return losses_and_errors
 
