@@ -22,6 +22,7 @@ class ReplayBuffer(object):
         self.batch_size = batch_size
         self.ptr = 0
         self.size = 0
+        self.is_weight = np.ones([batch_size, 1])
         
         self.state = np.zeros((buffer_size, state_dim))
         self.goal = np.zeros((buffer_size, goal_dim))
@@ -76,7 +77,14 @@ class PERReplayBuffer(ReplayBuffer):
         
         self.tree = SumTree(buffer_size)
         self.priorities = np.zeros((buffer_size, 1), dtype = np.float32)
-
+        self.absolute_error_upper = 1.
+    
+    def __len__(self):
+        return len(self.tree)
+    
+    def is_full(self):
+        return len(self.tree) >= self.tree.capacity
+    
     @property
     def per_error_type(self):
         return self._per_error_type
@@ -122,12 +130,19 @@ class PERReplayBuffer(ReplayBuffer):
         
         return batch_idxs
     
-    def _append_callback(self, error=100000):
+    def _append_callback(self, error=None):
         '''
         Callback function that is called at the beginning of sample
         It is used here to store the priorities of the samples into the SumTree object
         '''
-        priority = self._get_priority(error)
+        if error is None:
+            priority = np.amax(self.tree.tree[-self.tree.capacity:])
+            if priority == 0: priority = self.absolute_error_upper
+        else:
+            priority = min(self._get_priority(error), self.absolute_error_upper)
+        
+        #print(priority)
+
         self.priorities[self.ptr] = priority
         self.tree.add(priority, self.ptr)
     
@@ -136,13 +151,19 @@ class PERReplayBuffer(ReplayBuffer):
         Updates the priorities from the most recent batch
         Assumes the relevant batch indices are stored in self.ind
         '''
+        #print(errors)
+        # clipped_errors = np.minimum(np.abs(errors), self.absolute_error_upper)
         priorities = self._get_priority(errors)
+        #print(priorities)
         assert len(priorities) == self.ind.size
         for idx, p in zip(self.ind, priorities):
             self.priorities[idx] = p
         for p, i in zip(priorities, self.tree_idxs):
             self.tree.update(i, p)
     
+
+def is_power_of_2 (n):
+    return ((n & (n - 1)) == 0) and n != 0
 
     
 class SumTree:
@@ -167,10 +188,14 @@ class SumTree:
 
     def __init__(self, capacity):
         self.capacity = capacity
+        assert is_power_of_2(self.capacity), "Capacity must be power of 2."
         self.tree = np.zeros(2 * capacity - 1)  # Stores the priorities and sums of priorities
         self.indices = np.zeros(capacity)  # Stores the indices of the experiences
         self.n_entries = 0.
-
+    
+    def __len__(self):
+        return len(self.tree)
+    
     def _propagate(self, idx, change):
         parent = (idx - 1) // 2
 
