@@ -137,7 +137,12 @@ class PlaneBase(gym.Env):
         self.restore(_dest)
         return np.array(self.state), -md, False, {}
 
-    def render(self, mode='human'):
+    def render(self, mode='human', width=None, height=None):
+        if not(width):
+            width = self.size
+            height = self.size
+        else:
+            height = width
         image = self.map.copy()
         x, y = self.state
         x = int(x * self.size)
@@ -147,6 +152,7 @@ class PlaneBase(gym.Env):
             cv2.imshow('image', image)
             cv2.waitKey(2)
         else:
+            image = cv2.resize(image, dsize=(width, height), interpolation=cv2.INTER_CUBIC)
             return image
 
     def reset(self):
