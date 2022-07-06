@@ -27,7 +27,7 @@ def main(_argv):
     JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
     N_SEEDS = 1
     
-    launcher = Launcher(exp_name='xx1',
+    launcher = Launcher(exp_name='001',
                         python_file='main',
                         project_name='luna',
                         base_dir='./save/',
