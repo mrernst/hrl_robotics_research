@@ -92,8 +92,8 @@ class GoalPlane(gym.Env):
         out['achieved_goal'] = observation
         return out
 
-    def render(self, mode='rgb_array', subgoal=None):
-        image = self.env.render(mode='rgb_array')
+    def render(self, mode='rgb_array', subgoal=None, **kwargs):
+        image = self.env.render(mode='rgb_array', **kwargs)
         goal_loc = copy.copy(self.goal)
         goal_loc[0] = goal_loc[0] / self.maze_size * image.shape[1]
         goal_loc[1] = goal_loc[1] / self.maze_size * image.shape[0]
