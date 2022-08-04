@@ -6,6 +6,8 @@ Machine learning playground using OpenAI Gym and Mujoco/PyBullet for robotic tas
 ### Flat agent
 TD3 Algorithm
 
+### Hierarchical agent
+
 
 # Notes/ Acknowledgements
 Launcher is adapted from IAS TU Darmstadt -> https://gitlab.ias.informatik.tu-darmstadt.de/common/experiment_launcher
