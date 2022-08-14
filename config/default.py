@@ -139,6 +139,7 @@ def get_config():
 
 # _____________________________________________________________________________
 
+# HIRO Parameters from the paper
 # policy_name="TD3",
 # env_name="Reacher-v2",
 # start_timesteps=25e3,
