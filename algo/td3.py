@@ -41,8 +41,6 @@ def is_weighted_loss(loss_fn, expected, target, is_weight):
     is_weight = torch.from_numpy(is_weight).float().to(device)
     weighted_loss = is_weight * loss_fn(expected, target, reduction='none')
     return torch.sum(weighted_loss) / torch.numel(weighted_loss)
-# net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
-# net.apply(init_weights)
 
 # custom classes
 # -----
@@ -277,13 +275,15 @@ class TD3Controller(object):
     
     
     def _update_per_priorities(self, replay_buffer, td_error, next_state, action, reward):
-        '''Updates the priorities in the PER buffer depending on the *per* int.
+        '''
+        Updates the priorities in the PER buffer depending on the *per* int.
         :params per: 
         If 1, sample based on absolute TD-error.
         If 2, sample based on the distance between goal and state.
         If 3, sample proportional to the reward of a transition.
         If 4, sample transitions with a reward with a higher probability.
-        If 5, sample inversely to the TD-error. (i.e. we want small TD-errors)'''
+        If 5, sample inversely to the TD-error. (i.e. we want small TD-errors)
+        '''
         if hasattr(replay_buffer, 'per_error_type'):
             if replay_buffer.per_error_type == 1:
                 error = td_error
