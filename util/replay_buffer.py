@@ -61,6 +61,27 @@ class ReplayBuffer(object):
     def _get_indices(self, size):
         return np.random.randint(0, self.size, size=size)
     
+    def sample_with_timecontrast(self, time_horizon):
+        self.ind = self._get_indices(size=self.batch_size)
+        contrast_ind = self.ind + np.random.randint(1,time_horizon+1, self.ind.shape)
+        contrast_ind[contrast_ind > self.size] = self.ind[contrast_ind > self.size] - np.random.randint(1,time_horizon+1, contrast_ind[contrast_ind > self.size].shape)
+        
+        return ((
+            torch.FloatTensor(self.state[self.ind]).to(self.device),
+            torch.FloatTensor(self.goal[self.ind]).to(self.device),
+            torch.FloatTensor(self.action[self.ind]).to(self.device),
+            torch.FloatTensor(self.n_state[self.ind]).to(self.device),
+            torch.FloatTensor(self.reward[self.ind]).to(self.device),
+            torch.FloatTensor(self.not_done[self.ind]).to(self.device),
+        ),( 
+            torch.FloatTensor(self.state[contrast_ind]).to(self.device),
+            torch.FloatTensor(self.goal[contrast_ind]).to(self.device),
+            torch.FloatTensor(self.action[contrast_ind]).to(self.device),
+            torch.FloatTensor(self.n_state[contrast_ind]).to(self.device),
+            torch.FloatTensor(self.reward[contrast_ind]).to(self.device),
+            torch.FloatTensor(self.not_done[contrast_ind]).to(self.device),
+        ))
+    
     def _append_callback(self):
         pass
 
