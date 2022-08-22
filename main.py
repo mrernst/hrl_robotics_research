@@ -29,7 +29,7 @@ from util.utils import get_obs_array
 from util.utils import MakeGoalBased
 
 from agent.flat import FlatAgent
-from agent.hierarchical import HiroAgent
+from agent.hierarchical import HiroAgent, BaymaxAgent
 
 # custom functions
 # -----
@@ -81,7 +81,6 @@ def experiment(main, agent, seed, results_dir, **kwargs):
     import env.mujoco as emj
     #env = MakeGoalBased(gym.make(main_cnf.env_name))
     env = gym.make(main_cnf.env_name)
-
     #EnvWithGoal(create_maze_env(main_cnf.env_name), main_cnf.env_name)
     
     # set seeds
@@ -165,8 +164,52 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             policy_freq_sub=agent_cnf.sub.policy_freq,
             tau_sub=agent_cnf.sub.tau,
             )
+    elif agent_cnf.agent_type == 'baymax':
+        agent = BaymaxAgent(
+            state_dim=state_dim,
+            action_dim=action_dim,
+            goal_dim=goal_dim,
+            subgoal_dim=agent_cnf.subgoal_dim,
+            max_action_sub=max_action,
+            model_path=f'{results_dir}/{file_name}',
+            model_save_freq=main_cnf.model_save_freq,
+            start_timesteps=main_cnf.start_timesteps,
+            # meta agent arguments
+            prio_exp_replay_meta=agent_cnf.meta.prio_exp_replay,
+            buffer_size_meta=agent_cnf.meta.buffer_size,
+            batch_size_meta=agent_cnf.meta.batch_size,
+            actor_lr_meta=agent_cnf.meta.actor_lr,
+            critic_lr_meta=agent_cnf.meta.critic_lr,
+            actor_hidden_layers_meta=agent_cnf.meta.actor_hidden_layers,
+            critic_hidden_layers_meta=agent_cnf.meta.critic_hidden_layers,
+            expl_noise_meta=agent_cnf.meta.expl_noise,
+            policy_noise_meta=agent_cnf.meta.policy_noise,
+            noise_clip_meta=agent_cnf.meta.noise_clip,
+            discount_meta=agent_cnf.meta.discount,
+            policy_freq_meta=agent_cnf.meta.policy_freq,
+            tau_meta=agent_cnf.meta.tau,
+            buffer_freq=agent_cnf.meta.buffer_freq,
+            train_freq=agent_cnf.meta.train_freq,
+            reward_scaling=agent_cnf.meta.reward_scaling,
+            # sub agent arguments
+            prio_exp_replay_sub=agent_cnf.sub.prio_exp_replay,
+            buffer_size_sub=agent_cnf.sub.buffer_size,
+            batch_size_sub=agent_cnf.sub.batch_size,
+            actor_lr_sub=agent_cnf.sub.actor_lr,
+            critic_lr_sub=agent_cnf.sub.critic_lr,
+            actor_hidden_layers_sub=agent_cnf.sub.actor_hidden_layers,
+            critic_hidden_layers_sub=agent_cnf.sub.critic_hidden_layers,
+            expl_noise_sub=agent_cnf.sub.expl_noise,
+            policy_noise_sub=agent_cnf.sub.policy_noise * float(env.action_space.high[0]),
+            noise_clip_sub=agent_cnf.sub.noise_clip * float(env.action_space.high[0]),
+            discount_sub=agent_cnf.sub.discount,
+            policy_freq_sub=agent_cnf.sub.policy_freq,
+            tau_sub=agent_cnf.sub.tau,
+            # state compression arguments
+            testargument='testargument',
+            )
     else:
-        raise NotImplementedError('Choose between flat and hierarchical (hiro) agent')
+        raise NotImplementedError('Choose between flat and hierarchical (hiro, baymax) agents')
     
     if main_cnf.train:
         training_loop(
@@ -304,10 +347,17 @@ def training_loop(
                 for k in con.curr_train_metrics.keys():
                     logger.writer.add_scalar(
                         f"agent/{con.name}/{k}", con.curr_train_metrics[k], t)
+            # check whether the controller has an actor/critic infrastructure
+            if hasattr(con, 'actor'):
                 log_tensor_stats(torch.cat([p.flatten() for p in con.actor.parameters(
                 )]).detach(), f"agent/{con.name}/actor/weights", logger.writer, t)
                 log_tensor_stats(torch.cat([p.flatten() for p in con.critic.parameters(
                 )]).detach(), f"agent/{con.name}/critic/weights", logger.writer, t)
+            # this also makes possible logging other objects that have a network
+            # property
+            else:
+                log_tensor_stats(torch.cat([p.flatten() for p in con.network.parameters(
+                )]).detach(), f"agent/{con.name}/network/weights", logger.writer, t)
         
         # Save a video of the evaluation
         if main_cnf.eval_video_freq > 0:
