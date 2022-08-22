@@ -12,6 +12,8 @@ TD3 Algorithm
 # Notes/ Acknowledgements
 Launcher is adapted from IAS TU Darmstadt -> https://gitlab.ias.informatik.tu-darmstadt.de/common/experiment_launcher
 
+
+
 # Mujoco on Apple Silicon
 
 mkdir -p $HOME/.mujoco/mujoco210
@@ -21,15 +23,69 @@ mkdir -p $HOME/.mujoco/mujoco210/bin
 ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/libmujoco.2.1.1.dylib $HOME/.mujoco/mujoco210/bin/libmujoco210.dylib
 sudo ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/libmujoco.2.1.1.dylib /usr/local/lib/
 
-# For M1 (arm64) mac users:
-# brew install glfw
+### For M1 (arm64) mac users:
+brew install glfw
 ln -sf /opt/homebrew/lib/libglfw.3.dylib $HOME/.mujoco/mujoco210/bin
 
-# remove old installation
+### remove old installation
 rm -rf /opt/homebrew/Caskroom/miniforge/base/lib/python3.9/site-packages/mujoco_py
 
-# which python
-# exit
+which python
+exit
 
 export CC=/opt/homebrew/bin/gcc-12         # see https://github.com/openai/mujoco-py/issues/605
-#pip install mujoco-py && python -c 'import mujoco_py'
+pip install mujoco-py && python -c 'import mujoco_py'
+
+
+
+# Mujoco on FIAS Cluster
+
+1) Setup a miniconda environment with python 3.9.X and install pytorch, gym, dependencies you need for development
+> conda install numpy
+> conda install pytorch
+> pip install gym
+
+2) Install mujoco 2.1.0 from OpenAI, add to default folder at .mujoco
+> wget https://github.com/deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz --no-check-certificate
+> tar -xvzf mujoco210-linux-x86_64.tar.gz
+> mkdir ~/.mujoco
+> mv mujoco210 ~/.mujoco/mujoco210
+
+3) Install mujoco-py via pip (not executable yet)
+> pip3 install mujoco-py
+
+
+4) Use conda to install patchelf, menpo, osmesa because no root access at FIAS computers
+> conda install patchelf
+> conda install -c conda-forge menpo
+>  conda install -c menpo osmesa 
+
+5) Get source of libgcrypt <= 1.5.3! and compile yourself (https://www.gnupg.org/ftp/gcrypt/libgcrypt/)
+> wget https://www.gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-1.5.3.tar.gz --no-check-certificate
+
+6) Make a directory for custom libraries and move stuff there
+> mkdir ~/opt
+> mkdir ~/opt/lib
+> mkdir ~/opt/lib/libgcrypt
+> mv libgcrypt-1.5.3.tar.gz ~/opt/lib/
+> cd ~/opt/lib
+> tar -xvzf libgcrypt-1.5.3.tar.gz
+> cd libgcrypt-1.5.3
+> ./configure --prefix=/home/FIAS_USER_NAME/opt/lib/libgcrypt && make
+> make install
+
+7) You should append mujoco and prerequisites into the respective UNIX path variables because at first executing mujoco-py compiles it's C-language parts
+
+> vim ~/.bashrc
+
+and insert:
+
+export LD_LIBRARY_PATH=/home/FIAS_USER_NAME/.mujoco/mujoco210/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/FIAS_USER_NAME/opt/lib/libgcrypt/lib:$LD_LIBRARY_PATH
+export PATH=/home/FIAS_USER_NAME/opt/lib/libgcrypt/bin:$PATH
+export C_INCLUDE_PATH=/home/FIAS_USER_NAME/opt/lib/libgcrypt/include:$C_LIBRARY_PATH:$C_INCLUDE_PATH
+
+8) logout and login, or restart your shell
+
+9) Hopefully mujoco works, try
+> python -c "import mujoco_py"
