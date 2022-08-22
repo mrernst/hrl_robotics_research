@@ -54,7 +54,6 @@ def random_sample(size=None, dtype=np.float64):
     return sample
 
 
-# TODO this should be configureable and thus be part of the config?
 class GoalActionSpace(object):
     def __init__(self, dim, limits):
         self.shape = (dim,1)
