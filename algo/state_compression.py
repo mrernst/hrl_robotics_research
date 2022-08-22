@@ -14,7 +14,7 @@ import torch.nn.functional as F
 
 
 from algo.td3 import get_tensor
-from util.utils import HIRO_DEFAULT_LIMITS
+from util.utils import HIRO_DEFAULT_LIMITS, GoalActionSpace
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -183,12 +183,16 @@ class NetworkCompressor(nn.Module):
     NetworkCompressor is a StateCompressor class that compresses the state by funneling it through a neural network. Depending on the network class this can be an Encoder or Autoencoder structure
     """
     
-    def __init__(self, network, batch_size, learning_rate, weight_decay, simclr_temp=1.0, name='state_compressor'):
+    def __init__(self, network, loss_fn, learning_rate, weight_decay, name='state_compressor'):
         
         super(NetworkCompressor, self).__init__()
         self.network = network
         self.optimizer = torch.optim.AdamW(self.network.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        self.loss_fn = SimCLR_TT_Loss(cosine_sim, batch_size, temperature=simclr_temp)
+        
+        self.loss_fn = loss_fn
+        
+        self.goal_space = GoalActionSpace(dim=29, limits=HIRO_DEFAULT_LIMITS)
+        
         self.curr_train_metrics = {}
         self.name = name
         
@@ -264,7 +268,7 @@ class NetworkCompressor(nn.Module):
         # data
         pass
     
-    def generate_random_states(N, state_dim, state_range, state_max):
+    def generate_random_states(state_dim):
         # random states should be in a plausible range of states
         # in order to evaluate the degree of fit
         return torch.rand(N, state_dim) * state_range - state_max
@@ -283,7 +287,7 @@ class EncoderNetwork(nn.Module):
                 
     def forward(self, state):
         representation = F.relu(self.l1(state))
-        representation = torch.tanh(self.l2(substate))
+        representation = torch.tanh(self.l2(representation))
         # simple structure where representation and projection are the same
         return representation, representation
 
