@@ -141,16 +141,6 @@ class DataEssence(object):
         fig.suptitle(savefile.rsplit('/')[-1])
         fig.savefig(savefile)
         pass
-    
-    # TODO: write visualizer functions
-    def _plot_traintest_lcurve(self, axes):
-        pass
-
-    def _plot_timebased_lcurve(self, axes):
-        pass
-
-    def _plot_parameter_lcurve(self, axes):
-        pass
 
 
 class EssenceCollection(object):
