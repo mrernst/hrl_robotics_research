@@ -18,28 +18,62 @@ from collections import OrderedDict
 # -----
 from env.mujoco.maze_env_utils import construct_maze
 
+# constants
+
+HIRO_DEFAULT_LIMITS = np.array(
+        # COM position (m)
+        [-10, -10, -0.5,
+        # Orientation quaternion (au)
+        -1, -1, -1, -1,
+        # Joint positions (rad)
+        -0.5, -0.3, -0.5, -0.3, -0.5, -0.3, -0.5, -0.3,
+        # TODO: find plausible ranges here
+        #COM velocity (m/s)
+        -1,-1,-1,
+        #Change in orientation (dw/dt)
+        -1,-1,-1,
+        #Joint velocities (rad/s)
+        -1,-1,-1,-1,-1,-1,-1,-1,
+        #Target position (m)
+        -10,-10,
+], dtype=np.float32)
+
 # custom functions
 # -----
 
+def random_sample(size=None, dtype=np.float64):
+    """
+    np.random.random_sample but with variable precision to better work with torch
+    TODO: make everything work with Tensors and only use numpy for analysis
+    """
+    type_max = 1 << np.finfo(dtype).nmant
+    sample = np.empty(size, dtype=dtype)
+    sample[...] = np.random.randint(0, type_max, size=size) / dtype(type_max)
+    if size is None:
+        sample = sample[()]
+    return sample
+
+
 # TODO this should be configureable and thus be part of the config?
-class SubgoalActionSpace(object):
-    def __init__(self, dim):
-        limits = np.array(
-            [-10, -10, -0.5, 
-            #[-4, -4, -0.5, 
-            -1, -1, -1, -1,
-            -0.5, -0.3, -0.5, -0.3, -0.5, -0.3, -0.5, -0.3])
+class GoalActionSpace(object):
+    def __init__(self, dim, limits):
         self.shape = (dim,1)
         self.low = limits[:dim]
         self.high = -self.low
 
-    def sample(self):
-        return (self.high - self.low) * np.random.sample(self.high.shape) + self.low
+    def sample(self): 
+        sample = (self.high - self.low) * random_sample(self.high.shape, dtype=np.float32) + self.low
+        return sample
 
 class Subgoal(object):
-    def __init__(self, dim=15):
-        self.action_space = SubgoalActionSpace(dim)
+    def __init__(self, dim=15, limits=HIRO_DEFAULT_LIMITS):
+        self.action_space = GoalActionSpace(dim, limits)
         self.action_dim = self.action_space.shape[0]
+    def __str__(self):
+        return f"""Subgoal object, shape={self.action_space.shape}
+                    \n\t action_space low:{self.action_space.low}
+                    \n\t action_space high:{self.action_space.high}
+                    """
 
 
 def _is_update(episode, freq, ignore=0, rem=0):
