@@ -28,7 +28,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from agent.base import Agent
 from algo.td3 import HighLevelController, LowLevelController, TD3Controller
 from util.replay_buffer import LowLevelReplayBuffer, HighLevelReplayBuffer, LowLevelPERReplayBuffer, HighLevelPERReplayBuffer, ReplayBuffer, PERReplayBuffer
-from algo.state_compression import StateCompressor, SliceCompressor, NetworkCompressor, EncoderNetwork, AutoEncoderNetwork
+from algo.state_compression import StateCompressor, SliceCompressor, NetworkCompressor, EncoderNetwork, AutoEncoderNetwork, SimCLR_TT_Loss, cosine_sim
 from util.utils import Subgoal, _is_update
 
 
@@ -401,16 +401,18 @@ class BaymaxAgent(HiroAgent):
         # initialize additional components
         if self.state_compr_type_is_enc:
             state_compr_network = EncoderNetwork(state_dim=state_dim, subgoal_dim=kwargs['subgoal_dim']).to(device)
+            
+            loss_fn = SimCLR_TT_Loss(cosine_sim, batch_size=state_compr_batch_size, temperature=state_compr_temperature)
         else:
             state_compr_network = AutoEncoderNetwork(state_dim=state_dim, subgoal_dim=kwargs['subgoal_dim']).to(device)
+            loss_fn = None
         
         # overwrite compressor properties
         self.state_compressor = NetworkCompressor(
             network=state_compr_network,
-            batch_size=state_compr_batch_size,
+            loss_fn=loss_fn,
             learning_rate=state_compr_lr,
             weight_decay=state_compr_weight_decay,
-            simclr_temp=state_compr_temperature,
             )
         # append compressor to controllers list for easier logging
         self.controllers.append(self.state_compressor)
