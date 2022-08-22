@@ -10,6 +10,7 @@
 
 import numpy as np
 import torch
+import torch.nn as nn
 import gym
 import argparse
 import os
@@ -18,6 +19,7 @@ import sys
 import imageio
 import base64
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # utilities
 # -----
@@ -26,7 +28,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from agent.base import Agent
 from algo.td3 import HighLevelController, LowLevelController, TD3Controller
 from util.replay_buffer import LowLevelReplayBuffer, HighLevelReplayBuffer, LowLevelPERReplayBuffer, HighLevelPERReplayBuffer, ReplayBuffer, PERReplayBuffer
+from algo.state_compression import StateCompressor, SliceCompressor, NetworkCompressor, EncoderNetwork, AutoEncoderNetwork
 from util.utils import Subgoal, _is_update
+
 
 # custom classes
 # -----
@@ -76,7 +80,7 @@ class HiroAgent(Agent):
         ):
         
         # TODO: decouple buffer frequency from subgoal frequency at some point
-        # I don't think these should be the same anymore
+        # I don't think these should be the same
         
         self.subgoal = Subgoal(subgoal_dim)
         max_action_meta = torch.Tensor(self.subgoal.action_space.high * np.ones(subgoal_dim))
@@ -85,7 +89,10 @@ class HiroAgent(Agent):
         noise_clip_meta *= float(self.subgoal.action_space.high[0])
         
         self.model_save_freq = model_save_freq
-    
+        
+
+        self.state_compressor = SliceCompressor(subgoal_dim)
+        
         self.high_con = HighLevelController(
             state_dim=state_dim,
             goal_dim=goal_dim,
@@ -287,6 +294,7 @@ class HiroAgent(Agent):
         evaluate how the current low level agent
         is doing with following subgoals.
         """
+        raise NotImplementedError("Method is not yet implemented")
         desired = np.array(last_state[:sg.shape[0]]) + np.array(last_subgoal[:sg.shape[0]])
         actual = np.array(state[:sg.shape[0]])
         # get difference between where we want to go and what was actually reached
@@ -322,14 +330,14 @@ class HiroAgent(Agent):
         evaluate how the current high level agent
         is doing using a perfect low level controller
         """
-        pass
+        raise NotImplementedError("Method is not yet implemented")
 
     def subgoal_transition(self, s, sg, n_s):
         """
         subgoal transition function, provided as input to the low
         level controller.
         """
-        return s[:sg.shape[0]] + sg - n_s[:sg.shape[0]]
+        return self.state_compressor.eval(s) + sg - self.state_compressor.eval(n_s)
     
     def low_reward(self, s, sg, n_s):
         """
@@ -337,10 +345,11 @@ class HiroAgent(Agent):
         rewards the low level controller for getting close to the
         subgoals assigned to it.
         """
-        abs_s = s[:sg.shape[0]] + sg
-        rew = -np.linalg.norm(abs_s - n_s[:sg.shape[0]], 2)
+        abs_s =  self.state_compressor.eval(s) + sg
+       
+        rew = -np.linalg.norm(abs_s - self.state_compressor.eval(n_s), 2)        
+        #rew = -np.sqrt(np.sum((abs_s - self.state_compressor.eval(n_s))**2))
         return rew
-        #return -np.sqrt(np.sum((abs_s - n_s[:sg.shape[0]])**2))
     
     def end_step(self):
         # TODO: models should be saved after training steps, not episodes
@@ -369,6 +378,78 @@ class HiroAgent(Agent):
         self.low_con.load(episode)
         self.high_con.load(episode)
 
+
+class BaymaxAgent(HiroAgent):
+    def __init__(self, *args, **kwargs):
+        # gather additional arguments
+        kwargs.pop('testargument')
+        # TODO: transfer arguments to the baymax init at main.py
+        state_compr_batch_size = 256
+        state_compr_lr = 1e-4
+        state_compr_weight_decay = 0
+        state_compr_temperature = 1
+
+        state_dim = 29
+        state_compr_type = 'enc' # autoenc
+        self.state_compr_time_horizon = 1
+        self.state_compr_type_is_enc = True if state_compr_type == 'enc' else False
+        self.state_compr_train_freq = 10
+        
+        # initialize superclass
+        super(BaymaxAgent, self).__init__(*args, **kwargs)
+        
+        # initialize additional components
+        if self.state_compr_type_is_enc:
+            state_compr_network = EncoderNetwork(state_dim=state_dim, subgoal_dim=kwargs['subgoal_dim']).to(device)
+        else:
+            state_compr_network = AutoEncoderNetwork(state_dim=state_dim, subgoal_dim=kwargs['subgoal_dim']).to(device)
+        
+        # overwrite compressor properties
+        self.state_compressor = NetworkCompressor(
+            network=state_compr_network,
+            batch_size=state_compr_batch_size,
+            learning_rate=state_compr_lr,
+            weight_decay=state_compr_weight_decay,
+            simclr_temp=state_compr_temperature,
+            )
+        # append compressor to controllers list for easier logging
+        self.controllers.append(self.state_compressor)
+        
+        # modify the subgoal limits to be at -1, 1
+        self.subgoal = Subgoal(kwargs['subgoal_dim'], limits = np.ones(state_dim, dtype=np.float32)*(-1))
+        self.sg = self.subgoal.action_space.sample()
+        
+    def train(self, global_step):
+        losses = {}
+        td_errors = {}
+        
+        if global_step >= self.start_timesteps:
+            loss, td_error = self.low_con.train(self.replay_buffer_sub)
+            losses.update(loss)
+            td_errors.update(td_error)
+        
+            if global_step % self.train_freq == 0:
+                loss, td_error = self.high_con.train(self.replay_buffer_meta, self.low_con)
+                losses.update(loss)
+                td_errors.update(td_error)
+            
+            if global_step % self.state_compr_train_freq ==0:
+                # train the state compressor
+                if self.state_compr_type_is_enc:
+                    compressor_loss = self.state_compressor.train_enc(self.replay_buffer_meta, time_horizon=self.state_compr_time_horizon)
+                else:
+                    compressor_loss = self.state_compressor.train_autoenc(self.replay_buffer_meta)
+                losses.update({'compressor_loss': compressor_loss})
+        
+        return losses, td_errors
+
+    # proposed hrl agent that takes CLTT into account
+    # encode the states into the subgoal space when needed, everytime we need s[:sg.shape[0]] we need an envoded version of the state
+    # there needs to be a training loop and frequency for the subspace algorithm
+    # the buffer needs to be adapted to be able to sample useful transitions for CLTT
+    # def low_reward(self, s, sg, n_s):
+    #     # TODO: implement an additional reward function that is based on the recent danijar hafner paper
+    #     pass
 
 # _____________________________________________________________________________
 
