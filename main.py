@@ -206,7 +206,12 @@ def experiment(main, agent, seed, results_dir, **kwargs):
             policy_freq_sub=agent_cnf.sub.policy_freq,
             tau_sub=agent_cnf.sub.tau,
             # state compression arguments
-            testargument='testargument',
+            type_sc=agent_cnf.compressor.type,
+            batch_size_sc=agent_cnf.compressor.batch_size,
+            lr_sc=agent_cnf.compressor.lr,
+            temp_sc=agent_cnf.compressor.temp,
+            time_horizon_sc=agent_cnf.compressor.time_horizon,
+            train_freq_sc=agent_cnf.compressor.train_freq,
             )
     else:
         raise NotImplementedError('Choose between flat and hierarchical (hiro, baymax) agents')
@@ -358,11 +363,16 @@ def training_loop(
             else:
                 log_tensor_stats(torch.cat([p.flatten() for p in con.network.parameters(
                 )]).detach(), f"agent/{con.name}/network/weights", logger.writer, t)
-        
+            
+
         # Save a video of the evaluation
         if main_cnf.eval_video_freq > 0:
             if (t + 1) % main_cnf.eval_video_freq == 0 and t > main_cnf.start_timesteps:
                 mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir, to_video=True)
+                
+                # dev log some additional correlation images
+                logger.writer.add_figure('agent/state_compressor/training/', agent.state_compressor.eval_state_info(batch_size=256, buffer=agent.replay_buffer_meta), t)
+                logger.writer.add_figure('agent/state_compressor/validation', agent.state_compressor.eval_state_info(batch_size=256), t)
 
 
 def main(_argv):
