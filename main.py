@@ -371,6 +371,7 @@ def training_loop(
                 mean_eval_reward, success_rate = evaluate(t, env, agent, results_dir, to_video=True)
                 
                 # dev log some additional correlation images
+                # TODO this has to be implemented in a way such that hiro still works
                 logger.writer.add_figure('agent/state_compressor/training/', agent.state_compressor.eval_state_info(batch_size=256, buffer=agent.replay_buffer_meta), t)
                 logger.writer.add_figure('agent/state_compressor/validation', agent.state_compressor.eval_state_info(batch_size=256), t)
 
