@@ -11,10 +11,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.linalg import lstsq
 
 
 from algo.td3 import get_tensor
-from util.utils import HIRO_DEFAULT_LIMITS, GoalActionSpace
+from util.utils import HIRO_DEFAULT_LIMITS, ANTENV_STATE_NAMES, GoalActionSpace
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -25,21 +26,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # similarity functions
 def cosine_sim(x, x_pair):
     """
-    cosine_sim takes two torch tensors x, x_pair and returns the cosine
-    similarity between two torch tensors
+        Similarity function based on cosine similarity
+        params:
+            x: (torch.Tensor)
+            x_pair: (torch.Tensor)
+        return:
+            sim: the similarity between x and x_pair (torch.Tensor)
     """
     return F.cosine_similarity(x.unsqueeze(1), x_pair.unsqueeze(0), dim=2)
 
 def rbf_sim(x, x_pair):
     """
-    rbf_sim takes two torch tensors x, x_pair and returns the similarity based on radial
-    basis functions between two torch tensors
+        Similarity function based on radial basis functions
+        params:
+            x: (torch.Tensor)
+            x_pair: (torch.Tensor)
+        return:
+            sim: the similarity between x and x_pair (torch.Tensor)
     """
     return -torch.cdist(x, x_pair)
 
 
 @torch.no_grad()
-def lls_fit(train_features, train_labels, n_classes):
+def lls_fit(train_features, train_labels):
     """
         Fit a linear least square model
         params:
@@ -49,24 +58,23 @@ def lls_fit(train_features, train_labels, n_classes):
         return:
             ls: the trained lstsq model (torch.linalg) 
     """
-    ls = lstsq(train_features, F.one_hot(train_labels, n_classes).type(torch.float32))
+    ls = lstsq(train_features, train_labels)
     
     return ls
     
 @torch.no_grad()
-def lls_eval(trained_lstsq_model, eval_features, eval_labels):
+def lls_eval(trained_lstsq_model, eval_features):
     """
-    Evaluate a trained linear least square model
-    params:
-        trained_lstsq_model: the trained lstsq model (torch.linalg)
-        eval_features: the representations to be evaluated on (Tensor)
-        eval_labels: labels of the data (LongTensor)
-    return:
-        acc: the LLS accuracy (float)
+        Evaluate a trained linear least square model
+        params:
+            trained_lstsq_model: the trained lstsq model (torch.linalg)
+            eval_features: the representations to be evaluated on (Tensor)
+            eval_labels: labels of the data (LongTensor)
+        return:
+            acc: the LLS accuracy (float)
     """
     prediction = (eval_features @ trained_lstsq_model.solution)
-    acc = (prediction.argmax(dim=-1) == eval_labels).sum() / len(eval_features)
-    return prediction, acc
+    return prediction
 
 # custom classes
 # -----
@@ -191,7 +199,7 @@ class NetworkCompressor(nn.Module):
         
         self.loss_fn = loss_fn
         
-        self.goal_space = GoalActionSpace(dim=29, limits=HIRO_DEFAULT_LIMITS)
+        self.state_space = GoalActionSpace(dim=29, limits=HIRO_DEFAULT_LIMITS)
         
         self.curr_train_metrics = {}
         self.name = name
@@ -211,12 +219,50 @@ class NetworkCompressor(nn.Module):
 
     def forward(self, state):
         representation, projection = self.network(state)
-        return representation
+        return representation, projection
     
-    def train_enc(self, buffer, time_horizon):
+    def _collect_metrics(self, loss):
+        with torch.no_grad():
+            norm_type = 2
+            gr_norm = torch.norm(torch.stack([torch.norm(
+                p.grad.detach(), norm_type) for p in self.network.parameters()]), norm_type)
+            self.curr_train_metrics['gradients/norm'] = gr_norm
+            self.curr_train_metrics['loss'] = loss
+    
+    def _plot_state_correlation(self, inp, projection):
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import scipy as sp
+        
+        def annotate_correlation(data, **kws):
+            r, p = sp.stats.pearsonr(data['input'], data['projection'])
+            ax = plt.gca()
+            ax.text(.05, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
+                    transform=ax.transAxes)
+                    
+        df_list = []
+        for i in range(inp.shape[1]):
+            df_list.append(pd.DataFrame({'input': inp[:,i], 'projection': projection[:,i], "type":np.repeat(ANTENV_STATE_NAMES[i], inp.shape[0])}))
+        
+        df = pd.concat(df_list, ignore_index=True)
+        
+        sns.set_theme(style="ticks", font_scale=0.65)
+                # Show the results of a linear regression within each dataset
+        p = sns.lmplot(x="input", y="projection", col="type", hue="type", data=df,
+                   col_wrap=5, sharex=False, sharey=False, ci=None, palette="muted", height=1.25,
+                   scatter_kws={"s": 2, "alpha": 1})
+        p.map_dataframe(annotate_correlation)
+        #plt.show()
+        return p.fig
+        
+
+
+class EncoderCompressor(NetworkCompressor):
+    def train(self, buffer, time_horizon):
         # Sample from the buffer
         x, x_pair = buffer.sample_with_timecontrast(time_horizon)
-
+        
         x = torch.cat([x[0], x_pair[0]], 0).to(device)
         representation, projection = self.network(x)
         projection, pair = projection.split(projection.shape[0]//2)
@@ -232,7 +278,27 @@ class NetworkCompressor(nn.Module):
         
         return loss
     
-    def train_autoenc(self, buffer):
+    def eval_state_info(self, batch_size, buffer=None):
+        if buffer:
+            inp = buffer.sample()[0]
+        else:
+            inp = self.state_space.sample_batch(batch_size)
+            inp = get_tensor(inp)
+        with torch.no_grad():
+            representation, projection = self.forward(inp)
+        
+        lls_model = lls_fit(representation,inp)
+
+        # use the "reconstruction" based on the lls
+        reconstruction = lls_eval(lls_model, representation)
+
+        fig = self._plot_state_correlation(inp, reconstruction)
+        
+        return fig
+        
+class AutoEncoderCompressor(NetworkCompressor):
+    def train(self, buffer, time_horizon):
+        
         # Sample from the buffer
         x = buffer.sample()[0]
         representation, projection = self.network(x)
@@ -250,28 +316,19 @@ class NetworkCompressor(nn.Module):
         self._collect_metrics(loss)
         
         return loss
-        
-    def _collect_metrics(self, loss):
-        with torch.no_grad():
-            norm_type = 2
-            gr_norm = torch.norm(torch.stack([torch.norm(
-                p.grad.detach(), norm_type) for p in self.network.parameters()]), norm_type)
-            self.curr_train_metrics['gradients/norm'] = gr_norm
-            self.curr_train_metrics['loss'] = loss
-
-    def eval_state_info():
-        representation = self.eval(self.generate_random_states())
-        
-        # plot correlations between lls projections and true state
-        # calculate mutual information between representation and input
-        # or just take the output of the autoencoder to see whether it fits the
-        # data
-        pass
     
-    def generate_random_states(state_dim):
-        # random states should be in a plausible range of states
-        # in order to evaluate the degree of fit
-        return torch.rand(N, state_dim) * state_range - state_max
+    def eval_state_info(self, batch_size, buffer=None):
+        if buffer:
+            inp = buffer.sample()[0]
+        else:
+            inp = self.state_space.sample_batch(batch_size)
+            inp = get_tensor(inp)
+        with torch.no_grad():
+            representation, reconstruction = self.forward(inp)
+        
+        fig = self._plot_state_correlation(inp, reconstruction)
+        return fig
+        
 
 
 
@@ -303,9 +360,11 @@ class AutoEncoderNetwork(nn.Module):
                 
     def forward(self, state):
         representation = F.relu(self.l1(state))
-        representation = F.relu(self.l2(representation))
+        representation = torch.tanh(self.l2(representation))
         projection = F.relu(self.l3(representation))
-        projection = torch.tanh(self.l4(projection))
+        #projection = torch.tanh(self.l4(projection))
+        projection = self.l4(projection)
+
         return representation, projection
 
 
