@@ -28,7 +28,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from agent.base import Agent
 from algo.td3 import HighLevelController, LowLevelController, TD3Controller
 from util.replay_buffer import LowLevelReplayBuffer, HighLevelReplayBuffer, LowLevelPERReplayBuffer, HighLevelPERReplayBuffer, ReplayBuffer, PERReplayBuffer
-from algo.state_compression import StateCompressor, SliceCompressor, NetworkCompressor, EncoderNetwork, AutoEncoderNetwork, SimCLR_TT_Loss, cosine_sim
+from algo.state_compression import StateCompressor, SliceCompressor, EncoderCompressor, AutoEncoderCompressor, EncoderNetwork, AutoEncoderNetwork, SimCLR_TT_Loss, cosine_sim
 from util.utils import Subgoal, _is_update
 
 
@@ -382,43 +382,49 @@ class HiroAgent(Agent):
 class BaymaxAgent(HiroAgent):
     def __init__(self, *args, **kwargs):
         # gather additional arguments
-        kwargs.pop('testargument')
-        # TODO: transfer arguments to the baymax init at main.py
-        state_compr_batch_size = 256
-        state_compr_lr = 1e-4
+        state_compr_type = kwargs.pop('type_sc')
+        state_compr_batch_size = kwargs.pop('batch_size_sc')
+        state_compr_lr = kwargs.pop('lr_sc')
         state_compr_weight_decay = 0
-        state_compr_temperature = 1
+        state_compr_temperature = kwargs.pop('temp_sc')
 
-        state_dim = 29
-        state_compr_type = 'enc' # autoenc
-        self.state_compr_time_horizon = 1
+        self.state_compr_time_horizon = kwargs.pop('time_horizon_sc')
+        self.state_compr_train_freq = kwargs.pop('train_freq_sc')
+        
+        
         self.state_compr_type_is_enc = True if state_compr_type == 'enc' else False
-        self.state_compr_train_freq = 10
         
         # initialize superclass
         super(BaymaxAgent, self).__init__(*args, **kwargs)
         
         # initialize additional components
         if self.state_compr_type_is_enc:
-            state_compr_network = EncoderNetwork(state_dim=state_dim, subgoal_dim=kwargs['subgoal_dim']).to(device)
-            
+            # TODO: rename compressor components to input names
+            state_compr_network = EncoderNetwork(state_dim=kwargs['state_dim'], subgoal_dim=kwargs['subgoal_dim']).to(device)
             loss_fn = SimCLR_TT_Loss(cosine_sim, batch_size=state_compr_batch_size, temperature=state_compr_temperature)
+            # overwrite compressor properties
+            self.state_compressor = EncoderCompressor(
+                network=state_compr_network,
+                loss_fn=loss_fn,
+                learning_rate=state_compr_lr,
+                weight_decay=state_compr_weight_decay,
+                )
         else:
-            state_compr_network = AutoEncoderNetwork(state_dim=state_dim, subgoal_dim=kwargs['subgoal_dim']).to(device)
-            loss_fn = None
+            state_compr_network = AutoEncoderNetwork(state_dim=kwargs['state_dim'], subgoal_dim=kwargs['subgoal_dim']).to(device)
+            loss_fn = torch.nn.MSELoss()
+            # overwrite compressor properties
+            self.state_compressor = AutoEncoderCompressor(
+                network=state_compr_network,
+                loss_fn=loss_fn,
+                learning_rate=state_compr_lr,
+                weight_decay=state_compr_weight_decay,
+                )
         
-        # overwrite compressor properties
-        self.state_compressor = NetworkCompressor(
-            network=state_compr_network,
-            loss_fn=loss_fn,
-            learning_rate=state_compr_lr,
-            weight_decay=state_compr_weight_decay,
-            )
         # append compressor to controllers list for easier logging
         self.controllers.append(self.state_compressor)
         
         # modify the subgoal limits to be at -1, 1
-        self.subgoal = Subgoal(kwargs['subgoal_dim'], limits = np.ones(state_dim, dtype=np.float32)*(-1))
+        self.subgoal = Subgoal(kwargs['subgoal_dim'], limits = np.ones(kwargs['state_dim'], dtype=np.float32)*(-1))
         self.sg = self.subgoal.action_space.sample()
         
     def train(self, global_step):
@@ -435,13 +441,11 @@ class BaymaxAgent(HiroAgent):
                 losses.update(loss)
                 td_errors.update(td_error)
             
-            if global_step % self.state_compr_train_freq ==0:
+            if global_step % self.state_compr_train_freq == 0:
                 # train the state compressor
-                if self.state_compr_type_is_enc:
-                    compressor_loss = self.state_compressor.train_enc(self.replay_buffer_meta, time_horizon=self.state_compr_time_horizon)
-                else:
-                    compressor_loss = self.state_compressor.train_autoenc(self.replay_buffer_meta)
+                compressor_loss = self.state_compressor.train(self.replay_buffer_meta, time_horizon=self.state_compr_time_horizon)
                 losses.update({'compressor_loss': compressor_loss})
+                
         
         return losses, td_errors
 
