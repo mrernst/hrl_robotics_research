@@ -82,7 +82,7 @@ class Agent(object):
 				
 				while not done:
 					if render:
-						if hasattr(self, 'sg'):
+						if hasattr(self, 'sg') and not hasattr(self, 'state_compr_time_horizon'):
 							env.render(subgoal=self.sg+s[:self.sg.shape[0]]) #if possible render subgoal
 						else:
 							env.render()
@@ -96,7 +96,7 @@ class Agent(object):
 					step += 1
 					self.end_step()
 					if save_video:
-						if hasattr(self, 'sg'):
+						if hasattr(self, 'sg') and not hasattr(self, 'state_compr_time_horizon'):
 							videoframe = env.render(subgoal=self.sg+s[:self.sg.shape[0]], mode='rgb_array', width=720, height=480)
 							video.append_data(videoframe)
 						if step%ghost_every==0:
