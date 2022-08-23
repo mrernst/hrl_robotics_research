@@ -120,7 +120,16 @@ def get_config():
 					'train_freq': 10,
 					# Reward scaling
 					'reward_scaling': 0.1,
-				}
+				},
+				# state compression configuration
+				'compressor': {
+					'type': 'enc',
+					'batch_size': 256,
+					'lr': 1e-4,
+					'temp': 1,
+					'time_horizon': 1,
+					'train_freq': 10,
+				},
 			},
 		}
 	)
