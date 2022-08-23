@@ -214,7 +214,7 @@ class NetworkCompressor(nn.Module):
         
         # return to training state
         self.network.train()
-        return representation
+        return representation.cpu()
     
 
     def forward(self, state):
