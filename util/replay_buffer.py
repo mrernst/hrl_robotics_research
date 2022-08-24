@@ -64,7 +64,7 @@ class ReplayBuffer(object):
     def sample_with_timecontrast(self, time_horizon):
         self.ind = self._get_indices(size=self.batch_size)
         contrast_ind = self.ind + np.random.randint(1,time_horizon+1, self.ind.shape)
-        contrast_ind[contrast_ind > self.size] = self.ind[contrast_ind > self.size] - np.random.randint(1,time_horizon+1, contrast_ind[contrast_ind > self.size].shape)
+        contrast_ind[contrast_ind > self.size - 1] = self.ind[contrast_ind > self.size] - np.random.randint(1,time_horizon+1, contrast_ind[contrast_ind > self.size].shape)
         
         return ((
             torch.FloatTensor(self.state[self.ind]).to(self.device),
