@@ -292,7 +292,7 @@ class EncoderCompressor(NetworkCompressor):
         # use the "reconstruction" based on the lls
         reconstruction = lls_eval(lls_model, representation)
 
-        fig = self._plot_state_correlation(inp, reconstruction)
+        fig = self._plot_state_correlation(inp.cpu(), reconstruction.cpu())
         
         return fig
         
