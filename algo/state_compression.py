@@ -287,7 +287,7 @@ class EncoderCompressor(NetworkCompressor):
         with torch.no_grad():
             representation, projection = self.forward(inp)
         
-        lls_model = lls_fit(representation.cpu(),inp.cpu())
+        lls_model = lls_fit(representation,inp)
 
         # use the "reconstruction" based on the lls
         reconstruction = lls_eval(lls_model, representation)
