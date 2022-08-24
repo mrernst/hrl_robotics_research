@@ -286,9 +286,8 @@ class EncoderCompressor(NetworkCompressor):
             inp = get_tensor(inp)
         with torch.no_grad():
             representation, projection = self.forward(inp)
-            representation, projection = representation.cpu(), projection.cpu()
         
-        lls_model = lls_fit(representation,inp)
+        lls_model = lls_fit(representation.cpu(),inp.cpu())
 
         # use the "reconstruction" based on the lls
         reconstruction = lls_eval(lls_model, representation)
@@ -326,9 +325,8 @@ class AutoEncoderCompressor(NetworkCompressor):
             inp = get_tensor(inp)
         with torch.no_grad():
             representation, reconstruction = self.forward(inp)
-            representation, reconstruction = representation.cpu(), reconstruction.cpu()
         
-        fig = self._plot_state_correlation(inp, reconstruction)
+        fig = self._plot_state_correlation(inp.cpu(), reconstruction.cpu())
         return fig
         
 
