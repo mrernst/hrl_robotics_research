@@ -11,7 +11,6 @@ import torch
 import numpy as np
 
 import gym
-from gym import Wrapper
 from collections import OrderedDict
 
 # utilities
@@ -53,8 +52,12 @@ ANTENV_STATE_NAMES = np.array([
 
 def mkdir_p(path):
     """
-    mkdir_p takes a string path and creates a directory at this path if it
+    Takes a string path and creates a directory at this path if it
     does not already exist.
+    params:
+        path: path to be created
+    return:
+        None
     """
     try:
         os.makedirs(path)
@@ -67,7 +70,13 @@ def mkdir_p(path):
 
 def print_tensor_info(tensor, name=None, writer=None):
     """
-    Takes a torch.tensor and returns name and shape for debugging purposes
+    Returns name and shape of a torch.Tensor for debugging purposes.
+    params:
+        tensor: the torch.Tensor you are interested in (torch.Tensor)
+        name: name for logging purposes (str)
+        writer: torch.tensorboard_writer object for logging
+    return:
+        None
     """
     
     if writer:
@@ -84,8 +93,45 @@ def print_tensor_info(tensor, name=None, writer=None):
         
     pass
 
+
+def random_sample(size=None, dtype=np.float64):
+    """
+    np.random.random_sample but with variable precision to better work with torch
+    TODO: make everything work with Tensors and only use numpy for analysis
+    """
+    type_max = 1 << np.finfo(dtype).nmant
+    sample = np.empty(size, dtype=dtype)
+    sample[...] = np.random.randint(0, type_max, size=size) / dtype(type_max)
+    if size is None:
+        sample = sample[()]
+    return sample
+
+
+def _is_update(episode, freq, ignore=0, rem=0):
+        if episode!=ignore and episode%freq==rem:
+            return True
+        return False
+    
+    
+def get_obs_array(state, combined=False):
+    try:
+        if combined:
+            np.concatenate([state[k] for k in state.keys()])
+        else:
+            state = state['observation']
+    except:
+        pass
+    
+    return state
+
+
+# custom classes
+# -----
+
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
+    """
+    Computes and stores the average and current value.
+    """
     def __init__(self):
         self.reset()
     
@@ -100,20 +146,6 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
-
-
-def random_sample(size=None, dtype=np.float64):
-    """
-    np.random.random_sample but with variable precision to better work with torch
-    TODO: make everything work with Tensors and only use numpy for analysis
-    """
-    type_max = 1 << np.finfo(dtype).nmant
-    sample = np.empty(size, dtype=dtype)
-    sample[...] = np.random.randint(0, type_max, size=size) / dtype(type_max)
-    if size is None:
-        sample = sample[()]
-    return sample
-
 
 class GoalActionSpace(object):
     def __init__(self, dim, limits):
@@ -140,26 +172,11 @@ class Subgoal(object):
                     """
 
 
-def _is_update(episode, freq, ignore=0, rem=0):
-    if episode!=ignore and episode%freq==rem:
-        return True
-    return False
-
-
-def get_obs_array(state, combined=False):
-    try:
-        if combined:
-            np.concatenate([state[k] for k in state.keys()])
-        else:
-            state = state['observation']
-    except:
-        pass
-    
-    return state
 
 
 
 def visualize_goalspace(grid, state_encoder, state_trajectory, goal_trajectory):
+    raise NotImplementedError("To be done.")
     # this function is planned take a grid within the 2D or 3D position space of the environment
     # (may be different for a different environment) and uses the state encoder network to encode
     # and then visualizes the grid using a pacmap with euclidean distance encoded with color
@@ -174,14 +191,17 @@ def visualize_goalspace(grid, state_encoder, state_trajectory, goal_trajectory):
 #     pass
 
 def visualize_endpoints():
+    raise NotImplementedError("To be done.")
     pass
 
 def draw_2d_env_map():
+    raise NotImplementedError("To be done.")
     pass
     
     
 def _compose_alpha(img_in, img_layer, opacity):
-    """Calculate alpha composition ratio between two images.
+    """
+    Calculate alpha composition ratio between two images.
     """
     
     comp_alpha = np.minimum(img_in[:, :, 3], img_layer[:, :, 3]) * opacity
@@ -210,7 +230,7 @@ def darken(img_in, img_layer, opacity):
 
 # wrapper to make standard environments 'goal-based' by providing a 
 # fake goal in order to test the flat agent
-class MakeGoalBased(Wrapper):
+class MakeGoalBased(gym.Wrapper):
     def __init__(self, env):
         super(MakeGoalBased, self).__init__(env)
         ob_space = env.observation_space
