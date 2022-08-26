@@ -295,6 +295,9 @@ class HiroAgent(Agent):
         is doing with following subgoals.
         """
         raise NotImplementedError("Method is not yet implemented")
+        # TODO: build this with the state_compressor
+        # TODO: use an AverageMeter to keep track of the data
+        # only write down statistics to the logs
         desired = np.array(last_state[:sg.shape[0]]) + np.array(last_subgoal[:sg.shape[0]])
         actual = np.array(state[:sg.shape[0]])
         # get difference between where we want to go and what was actually reached
@@ -381,6 +384,7 @@ class HiroAgent(Agent):
 
 class BaymaxAgent(HiroAgent):
     def __init__(self, *args, **kwargs):
+        
         # gather additional arguments
         state_compr_type = kwargs.pop('type_sc')
         state_compr_batch_size = kwargs.pop('batch_size_sc')
@@ -397,13 +401,12 @@ class BaymaxAgent(HiroAgent):
         # initialize superclass
         super(BaymaxAgent, self).__init__(*args, **kwargs)
         
-        # initialize additional components
         if self.state_compr_type_is_enc:
-            # TODO: rename compressor components to input names
             state_compr_network = EncoderNetwork(state_dim=kwargs['state_dim'], subgoal_dim=kwargs['subgoal_dim']).to(device)
             loss_fn = SimCLR_TT_Loss(cosine_sim, batch_size=state_compr_batch_size, temperature=state_compr_temperature)
-            # overwrite compressor properties
+            # overwrite compressor property
             self.state_compressor = EncoderCompressor(
+                model_path=kwargs['model_path'],
                 network=state_compr_network,
                 loss_fn=loss_fn,
                 learning_rate=state_compr_lr,
@@ -412,8 +415,9 @@ class BaymaxAgent(HiroAgent):
         else:
             state_compr_network = AutoEncoderNetwork(state_dim=kwargs['state_dim'], subgoal_dim=kwargs['subgoal_dim']).to(device)
             loss_fn = torch.nn.MSELoss()
-            # overwrite compressor properties
+            # overwrite compressor property
             self.state_compressor = AutoEncoderCompressor(
+                model_path=kwargs['model_path'],
                 network=state_compr_network,
                 loss_fn=loss_fn,
                 learning_rate=state_compr_lr,
@@ -421,12 +425,39 @@ class BaymaxAgent(HiroAgent):
                 )
         
         # append compressor to controllers list for easier logging
+        # even though it is not really a compressor
         self.controllers.append(self.state_compressor)
         
-        # modify the subgoal limits to be at -1, 1
+        # modify the subgoal limits to be at -1, 1 to reflect the
+        # encoder properties
         self.subgoal = Subgoal(kwargs['subgoal_dim'], limits = np.ones(kwargs['state_dim'], dtype=np.float32)*(-1))
         self.sg = self.subgoal.action_space.sample()
-        
+
+    def save(self, episode):
+        """
+        Save the agent's networks.
+        params:
+            episode: current episode (int)
+        return:
+            None
+        """
+        self.low_con.save(episode)
+        self.high_con.save(episode)
+        self.state_compressor.save(episode)
+    
+    def load(self, episode):
+        """
+        Load the agent's networks
+        params:
+            episode: episode number to load.
+        return:
+            None
+        """
+        self.low_con.load(episode)
+        self.high_con.load(episode)
+        self.state_compressor.load(episode)
+
+
     def train(self, global_step):
         losses = {}
         td_errors = {}
@@ -448,14 +479,8 @@ class BaymaxAgent(HiroAgent):
                 
         
         return losses, td_errors
-
-    # proposed hrl agent that takes CLTT into account
-    # encode the states into the subgoal space when needed, everytime we need s[:sg.shape[0]] we need an envoded version of the state
-    # there needs to be a training loop and frequency for the subspace algorithm
-    # the buffer needs to be adapted to be able to sample useful transitions for CLTT
-    # def low_reward(self, s, sg, n_s):
-    #     # TODO: implement an additional reward function that is based on the recent danijar hafner paper
-    #     pass
+    
+    # TODO: implement an additional reward function that is based on the recent danijar hafner paper
 
 # _____________________________________________________________________________
 

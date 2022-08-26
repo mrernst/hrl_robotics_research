@@ -8,6 +8,7 @@
 # standard libraries
 # -----
 import numpy as np
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -241,7 +242,7 @@ class NetworkCompressor(nn.Module):
     NetworkCompressor is a StateCompressor class that compresses the state by funnelling it through a neural network. Depending on the child class this can be an Encoder or Auto-Encoder structure.
     """
     
-    def __init__(self, network, loss_fn, learning_rate, weight_decay, name='state_compressor'):
+    def __init__(self, model_path, network, loss_fn, learning_rate, weight_decay, name='state_compressor'):
         """
         Initialize a NetworkCompressor class.
         params:
@@ -263,6 +264,7 @@ class NetworkCompressor(nn.Module):
         self.state_space = GoalActionSpace(dim=29, limits=HIRO_DEFAULT_LIMITS)
         
         self.curr_train_metrics = {}
+        self.model_path = model_path
         self.name = name
         
     def eval(self, state):
@@ -299,6 +301,48 @@ class NetworkCompressor(nn.Module):
         representation, projection = self.network(state)
         return representation, projection
     
+    def save(self, episode):
+        """
+        Save the network structure to disk.
+        params:
+            episode: current episode (int)
+        return:
+            None
+        """
+        # create episode directory. (e.g. model/2000)
+        model_path = os.path.join(self.model_path, str(episode))
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+        
+        torch.save(self.network.state_dict(),
+            os.path.join(model_path, self.name+"_network"))
+        torch.save(self.optimizer.state_dict(),
+            os.path.join(model_path, self.name+"_optimizer"))
+
+    
+    def load(self, episode):
+        """
+        Load the network structure from disk.
+        params:
+            episode: episode number to load (int). Value of -1 loads 
+                most recent save file
+        return:
+            None
+        """
+        if episode<0:
+            episode_list = map(int, os.listdir(self.model_path))
+            episode = max(episode_list)
+        
+        print(" " * 80 + "\r" + f'[INFO] Loaded model at episode {episode}')
+        
+        model_path = os.path.join(self.model_path, str(episode))
+        
+        self.network.load_state_dict(torch.load(os.path.join(
+            model_path, self.name+"_network"), map_location=torch.device(device)))
+        self.optimizer.load_state_dict(
+            torch.load(os.path.join(model_path, self.name+"_optimizer"), map_location=torch.device(device)))
+        
+    
     def _collect_metrics(self, loss):
         """
         Helper-method to collect useful metrics for logging.
@@ -313,6 +357,7 @@ class NetworkCompressor(nn.Module):
                 p.grad.detach(), norm_type) for p in self.network.parameters()]), norm_type)
             self.curr_train_metrics['gradients/norm'] = gr_norm
             self.curr_train_metrics['loss'] = loss
+    
     
     def _plot_state_correlation(self, inp, projection):
         """
