@@ -2,3 +2,5 @@ absl-py
 ml-collections
 tensorboard
 pytorch
+plotext
+mujoco
