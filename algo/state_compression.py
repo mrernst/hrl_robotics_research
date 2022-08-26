@@ -82,8 +82,19 @@ def lls_eval(trained_lstsq_model, eval_features):
 
 
 class SimCLR_TT_Loss(nn.Module):
+    """
+    Loss function for SimCLR-style contrastive learning
+    """
     def __init__(self, sim_func, batch_size, temperature):
-        """Initialize the SimCLR_TT_Loss class"""
+        """
+        Initialize the SimCLR_TT_Loss class.
+        params:
+            sim_func: A similarity function like cosine-sim
+            batch_size: The batch-size, needed for reducing negative samples
+            temperature: The annealing temperature of the NCELoss
+        return:
+            None
+        """
         super(SimCLR_TT_Loss, self).__init__()
     
         self.batch_size = batch_size
@@ -95,10 +106,12 @@ class SimCLR_TT_Loss(nn.Module):
     
     def mask_correlated_samples(self, batch_size):
         """
-        mask_correlated_samples takes the int batch_size
-        and returns an np.array of size [2*batchsize, 2*batchsize]
-        which masks the entries that are the same image or
-        the corresponding positive contrast
+        Masks the entries that are the same image or the corresponding
+        positive contrast.
+        params:
+            batch_size: The batch-size of the training
+        return:
+            mask: np.array of size [2*batch_size, 2*batch_size]
         """
         mask = torch.ones(2 * batch_size, 2 * batch_size, dtype=torch.bool)
         mask = mask.fill_diagonal_(0)
@@ -113,7 +126,14 @@ class SimCLR_TT_Loss(nn.Module):
         """
         Given a positive pair, we treat the other 2(N − 1)
         augmented examples within a minibatch as negative examples.
-        to control for negative samples we just cut off losses
+        To control for negative samples we just cut off losses.
+        params:
+            x: The 'first' contrast
+            x_pair: The 'second' contrast
+            labels: Can be introduced for a semi-supervised learning scheme
+            N_negative: Limit of the number of negative pairs
+        return:
+            loss: The scalar NCE-Loss
         """
         N = 2 * self.batch_size
     
@@ -160,9 +180,16 @@ class SimCLR_TT_Loss(nn.Module):
 
 class StateCompressor(object):
     """
-    StateCompressor pseudoclass
+    StateCompressor pseudoclass.
     """
     def __init__(self, subgoal_dim):
+        """
+        Initialize a StateCompressor class.
+        params:
+            subgoal_dim: dimension of the subgoal (int)
+        return:
+            None
+        """
         #self.subgoal = Subgoal(subgoal_dim)
         self.subgoal_dim = subgoal_dim
         self.curr_train_metrics = {}
@@ -174,24 +201,58 @@ class StateCompressor(object):
 
 class SliceCompressor(StateCompressor):
     """
-    SliceCompressor is a StateCompressor class that compresses the state by just slicing the original state to the dimensionality defined as subgoal_dim
+    SliceCompressor is a StateCompressor class that compresses the state by slicing the original state to the dimensionality defined by subgoal_dim
     """
     def __init__(self, subgoal_dim):
+        """
+        Initialize a SliceCompressor class.
+        params:
+            subgoal_dim: dimension of the subgoal (int)
+        return:
+            None
+        """
         super().__init__(subgoal_dim)
     
     def __call__(self, state):
+        """
+        Redefines a call on the object.
+        params:
+            state: The original state as an input
+        return:
+            sliced_state: A truncated state with dimensionality subgoal_dim
+        """
         return state[:self.subgoal_dim]
     
     def eval(self, state):
+        """
+        Evaluate a given state. Redefinition of __call__ in order to
+        guarantee compatibility with a torch.nn.Module object that
+        uses the forward method to redefine __call__.
+        params:
+            state: The original state as an input
+        return:
+            sliced_state: A truncated state with dimensionality subgoal_dim
+        """
         return self(state)
 
 
 class NetworkCompressor(nn.Module):
     """
-    NetworkCompressor is a StateCompressor class that compresses the state by funneling it through a neural network. Depending on the network class this can be an Encoder or Autoencoder structure
+    NetworkCompressor is a StateCompressor class that compresses the state by funnelling it through a neural network. Depending on the child class this can be an Encoder or Auto-Encoder structure.
     """
     
     def __init__(self, network, loss_fn, learning_rate, weight_decay, name='state_compressor'):
+        """
+        Initialize a NetworkCompressor class.
+        params:
+            network: Neural network that returns two outputs (nn.Module)
+            loss_fn: loss function that takes two inputs and returns a scalar value
+            learning_rate: learning rate of the Adam optimizer used  (float)
+            weight_decay: weight decay of the Adam optimizer used (float)
+            name: The name of the module, used for logging (string)
+        return:
+            None
+        """
         
         super(NetworkCompressor, self).__init__()
         self.network = network
@@ -205,6 +266,14 @@ class NetworkCompressor(nn.Module):
         self.name = name
         
     def eval(self, state):
+        """
+        Evaluate (compress) a given state.
+        params:
+            state: The original state as an input
+        return:
+            compressed_state: The output of the neural network
+                compressing the state
+        """
         # activate evaluation mode
         self.network.eval()
         
@@ -218,10 +287,26 @@ class NetworkCompressor(nn.Module):
     
 
     def forward(self, state):
+        """
+        The forward pass through the network.
+        params:
+            state:  The original state as an input
+        return:
+            representation: The internal, compressed representation of
+                the state
+            projection: The representation that is used to optimize
+        """
         representation, projection = self.network(state)
         return representation, projection
     
     def _collect_metrics(self, loss):
+        """
+        Helper-method to collect useful metrics for logging.
+        params:
+            loss: The current training loss (float)
+        return:
+            None
+        """
         with torch.no_grad():
             norm_type = 2
             gr_norm = torch.norm(torch.stack([torch.norm(
@@ -230,12 +315,29 @@ class NetworkCompressor(nn.Module):
             self.curr_train_metrics['loss'] = loss
     
     def _plot_state_correlation(self, inp, projection):
+        """
+        Helper-method to plot the correlation between input and projected output states, which yields some information about
+        which state information is retained.
+        params:
+            inp: The input state
+            projection: The projected output state
+        return:
+            fig: A figure (matplotlib.pyplot.Figure)
+        """
         import pandas as pd
         import matplotlib.pyplot as plt
         import seaborn as sns
         import scipy as sp
         
-        def annotate_correlation(data, **kws):
+        def _annotate_correlation(data, **kws):
+            """
+            Internal helper-function to annotate correlation text to a 
+            figure.
+            params:
+                data: A pandas dataframe that contains the plotted data (pd.DataFrame)
+            return:
+                None
+            """
             r, p = sp.stats.pearsonr(data['input'], data['projection'])
             ax = plt.gca()
             ax.text(.05, .8, 'r={:.2f}, p={:.2g}'.format(r, p),
@@ -252,14 +354,25 @@ class NetworkCompressor(nn.Module):
         p = sns.lmplot(x="input", y="projection", col="type", hue="type", data=df,
                    col_wrap=5, sharex=False, sharey=False, ci=None, palette="muted", height=1.25,
                    scatter_kws={"s": 2, "alpha": 1})
-        p.map_dataframe(annotate_correlation)
-        #plt.show()
+        p.map_dataframe(_annotate_correlation)
         return p.fig
         
 
 
 class EncoderCompressor(NetworkCompressor):
+    """
+    EncoderCompressor is a NetworkCompressor class that compresses the state by funnelling it through a neural network. It has an Encoder structure.
+    """
     def train(self, buffer, time_horizon):
+        """
+        Train the network.
+        params:
+            buffer: The replay-buffer of the used agent
+            time_horizon: The time-horizon out of which the contrasts 
+                are sampled
+        return:
+            loss: The current training loss
+        """
         # Sample from the buffer
         x, x_pair = buffer.sample_with_timecontrast(time_horizon)
         
@@ -279,6 +392,14 @@ class EncoderCompressor(NetworkCompressor):
         return loss
     
     def eval_state_info(self, batch_size, buffer=None):
+        """
+        Compare input and output of the network regarding retained state-information
+        params:
+            batch_size: The batch-size used for sampling
+            buffer: The replay-buffer of the used agent
+        return:
+            fig: A figure (matplotlib.pyplot.Figure)
+        """
         if buffer:
             inp = buffer.sample()[0]
         else:
@@ -297,8 +418,18 @@ class EncoderCompressor(NetworkCompressor):
         return fig
         
 class AutoEncoderCompressor(NetworkCompressor):
+    """
+    AutoEncoderCompressor is a NetworkCompressor class that compresses the state by funnelling it through a neural network. It has an AutoEncoder structure.
+    """
     def train(self, buffer, time_horizon):
-        
+        """
+        Train the network.
+        params:
+            buffer: The replay-buffer of the used agent
+            time_horizon: Not used, just to enable compatibility with the EncoderCompressor class
+        return:
+            loss: The current training loss
+        """
         # Sample from the buffer
         x = buffer.sample()[0]
         representation, projection = self.network(x)
@@ -318,6 +449,14 @@ class AutoEncoderCompressor(NetworkCompressor):
         return loss
     
     def eval_state_info(self, batch_size, buffer=None):
+        """
+        Compare input and output of the network regarding retained state-information
+        params:
+            batch_size: The batch-size used for sampling
+            buffer: The replay-buffer of the used agent
+        return:
+            fig: A figure (matplotlib.pyplot.Figure)
+        """
         if buffer:
             inp = buffer.sample()[0]
         else:
@@ -336,13 +475,33 @@ class AutoEncoderCompressor(NetworkCompressor):
 # -----
 
 class EncoderNetwork(nn.Module):
+    """
+    torch.nn.Module that represents a simple encoder network.
+    """
     def __init__(self, state_dim, subgoal_dim, hidden_layers=[128]):
+        """
+        Initialize EncoderNetwork class.
+        params:
+            state_dim: The dimension of the state (int)
+            subgoal_dim: The dimension of the subgoal (int)
+            hidden_layers: The neurons of each hidden_layer (list(int))
+        """
         super(EncoderNetwork, self).__init__()
         
         self.l1 = nn.Linear(state_dim, hidden_layers[0])
         self.l2 = nn.Linear(hidden_layers[0], subgoal_dim)
                 
     def forward(self, state):
+        """
+        Forward pass of the network.
+        params:
+            state: The original state as input
+        return:
+            representation: The encoded state
+            projection: A nonlinear projection of the representation
+                (in this small network it is just the representation 
+                again)
+        """
         representation = F.relu(self.l1(state))
         representation = torch.tanh(self.l2(representation))
         # simple structure where representation and projection are the same
@@ -350,7 +509,18 @@ class EncoderNetwork(nn.Module):
 
 
 class AutoEncoderNetwork(nn.Module):
+    """
+    torch.nn.Module that represents a simple autoencoder network.
+    """
     def __init__(self, state_dim, subgoal_dim, hidden_layers=[128]):
+        """
+        Initialize AutoEncoderNetwork class.
+        params:
+            state_dim: The dimension of the state (int)
+            subgoal_dim: The dimension of the subgoal (int)
+            hidden_layers: The neurons of each hidden_layer (list(int))
+        """
+
         super(AutoEncoderNetwork, self).__init__()
         
         self.l1 = nn.Linear(state_dim, hidden_layers[0])
@@ -359,13 +529,22 @@ class AutoEncoderNetwork(nn.Module):
         self.l4 = nn.Linear(hidden_layers[0], state_dim)
                 
     def forward(self, state):
+        """
+        Forward pass of the network.
+        params:
+            state: The original state as input
+        return:
+            representation: The encoded state
+            reconstruction: The decoded representation
+        """
+
         representation = F.relu(self.l1(state))
         representation = torch.tanh(self.l2(representation))
-        projection = F.relu(self.l3(representation))
+        reconstruction = F.relu(self.l3(representation))
         #projection = torch.tanh(self.l4(projection))
-        projection = self.l4(projection)
+        reconstruction = self.l4(reconstruction)
 
-        return representation, projection
+        return representation, reconstruction
 
 
 
