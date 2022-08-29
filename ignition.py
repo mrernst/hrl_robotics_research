@@ -96,7 +96,6 @@ def main(_argv):
         else:
             launcher.add_experiment(**{
                 'config.agent.agent_type': 'baymax',
-                'config.main.env_name': 'AntMaze-v1',
                 'config.main.max_timesteps': 5e6,
                 'config.agent.compressor.type':ct,
             })
