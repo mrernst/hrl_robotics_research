@@ -37,7 +37,7 @@ from util.utils import Subgoal, AverageMeter, _is_update
 
 class HiroAgent(Agent):
     """
-    Efficient Hierarchical Reinforcement Learning Agent
+    Data-Efficient Hierarchical Reinforcement Learning Agent.
     """
     def __init__(
         self,
@@ -189,6 +189,20 @@ class HiroAgent(Agent):
         self.start_timesteps = start_timesteps
     
     def step(self, s, env, step, global_step=0, explore=False):
+        """
+        Step the simulation.
+        params:
+            s: current state (torch.Tensor)
+            env: gym environment (gym.env)
+            step: current time step (int)
+            global_step: current time step (int) #TODO why is that?
+            explore: exploration boolean (bool)
+        return:
+            a: chosen action (torch.Tensor)
+            r: received reward (float)
+            n_s: next state (torch.Tensor)
+            done: done boolean (bool)
+        """
         with torch.no_grad():
             ## Lower Level Controller
             if explore:
@@ -219,6 +233,18 @@ class HiroAgent(Agent):
         return a, r, n_s, done
     
     def append(self, step, s, a, n_s, r, d):
+        """
+        Append variables to the buffer.
+        params:
+            step: current time step (int)
+            s: current state (torch.Tensor)
+            a: current action (torch.Tensor)
+            n_s: next state (torch.Tensor)
+            r: reward (float)
+            d: done (bool)
+        return:
+            None
+        """
         self.sr = self.low_reward(s, self.sg, n_s)
     
         # Low Replay Buffer
@@ -247,6 +273,14 @@ class HiroAgent(Agent):
         self.buf[7].append(a)
     
     def train(self, global_step):
+        """
+        Train the agent's controllers.
+        params:
+            global_step: current time step (int)
+        return:
+            losses: Dictionary of current losses (dict)
+            td_errors: Dictionary of current TD Errors (dict)
+        """
         losses = {}
         td_errors = {}
     
@@ -263,6 +297,16 @@ class HiroAgent(Agent):
         return losses, td_errors
     
     def _sample_random_subgoal(self, step, s, sg, n_s):
+        """
+        Sample a random subgoal.
+        params:
+            step: current training step (int)
+            s: current state (torch.Tensor)
+            sg: current subgoal (torch.Tensor)
+            n_s: next state (torch.Tensor)
+        return:
+            sg: random subgoal
+        """
         if step % self.buffer_freq == 0: # Should be zero
             sg = self.subgoal.action_space.sample()
         else:
@@ -271,9 +315,27 @@ class HiroAgent(Agent):
         return sg
     
     def _choose_action_with_noise(self, s, sg):
+        """
+        Choose action with low-level controller.
+        params:
+            s: current state (torch.Tensor)
+            sg: current subgoal (torch.Tensor)
+        return:
+            a: action (torch.Tensor)
+        """
         return self.low_con.policy_with_noise(s, sg)
     
     def _choose_subgoal_with_noise(self, step, s, sg, n_s):
+        """
+        Choose a subgoal via high-level controller + noise or transition existing subgoal.
+        params:
+            step: current training step (int)
+            s: current state (torch.Tensor)
+            sg: current subgoal (torch.Tensor)
+            n_s: next state (torch.Tensor)
+        returns:
+            sg: next subgoal
+        """
         if step % self.buffer_freq == 0: # Should be zero
             sg = self.high_con.policy_with_noise(s, self.fg)
         else:
@@ -282,9 +344,27 @@ class HiroAgent(Agent):
         return sg
     
     def _choose_action(self, s, sg):
+        """
+        Choose action with low-level controller.
+        params:
+            s: current state (torch.Tensor)
+            sg: current subgoal (torch.Tensor)
+        return:
+            a: action (torch.Tensor)
+        """
         return self.low_con.policy(s, sg)
     
     def _choose_subgoal(self, step, s, sg, n_s):
+        """
+        Choose a subgoal via high-level controller or transition existing subgoal.
+        params:
+            step: current training step (int)
+            s: current state (torch.Tensor)
+            sg: current subgoal (torch.Tensor)
+            n_s: next state (torch.Tensor)
+        returns:
+            sg: next subgoal
+        """
         if step % self.buffer_freq == 0:
             sg = self.high_con.policy(s, self.fg)
         else:
@@ -294,8 +374,15 @@ class HiroAgent(Agent):
     
     def _evaluate_low(self, state, last_state, sg, last_subgoal):
         """
-        evaluate how the current low level agent
+        Evaluate how the current low level agent
         is doing with following subgoals.
+        params:
+            state: current state (torch.Tensor)
+            last_state: the state before current state (torch.Tensor)
+            sg: current subgoal (torch.Tensor)
+            last_subgoal: the subgoal before sg (torch.Tensor)
+        return:
+            None
         """
         raise NotImplementedError("Method is not yet implemented")
         # TODO: build this with the state_compressor
@@ -347,23 +434,35 @@ class HiroAgent(Agent):
     
     def _evaluate_high(self):
         """
-        evaluate how the current high level agent
-        is doing using a perfect low level controller
+        Evaluate how the current high level agent
+        is doing using a perfect low level controller.
         """
         raise NotImplementedError("Method is not yet implemented")
 
     def subgoal_transition(self, s, sg, n_s):
         """
-        subgoal transition function, provided as input to the low
+        Subgoal transition function, provided as input to the low
         level controller.
+        params:
+            s: state (torch.Tensor)
+            sg: subgoal (torch.Tensor)
+            n_s: next state (torch.Tensor)
+        return:
+            tr_sg: transitioned subgoal
         """
         return self.state_compressor.eval(s) + sg - self.state_compressor.eval(n_s)
     
     def low_reward(self, s, sg, n_s):
         """
-        reward function for low level controller.
+        Reward function for low level controller.
         rewards the low level controller for getting close to the
         subgoals assigned to it.
+        params:
+            s: state (torch.Tensor)
+            sg: subgoal (torch.Tensor)
+            n_s: next state (torch.Tensor)
+        return:
+            rew: reward (float)
         """
         abs_s =  self.state_compressor.eval(s) + sg
        
@@ -372,11 +471,26 @@ class HiroAgent(Agent):
         return rew
     
     def end_step(self):
+        """
+        End the current step.
+        params:
+            None
+        return:
+            None
+        """
         # TODO: models should be saved after training steps, not episodes
         self.episode_subreward += self.sr
         self.sg = self.n_sg
     
     def end_episode(self, episode, logger=None):
+        """
+        End the current episode.
+        params:
+            episode: current episode (int)
+            logger:
+        return:
+            None
+        """
         # if logger: 
         #     # log
         #     #logger.write('reward/Intrinsic Reward', self.episode_subreward, episode)
@@ -391,10 +505,24 @@ class HiroAgent(Agent):
         self.buf = [None, None, None, 0, None, None, [], []]
     
     def save(self, episode):
+        """
+        Save the agent's networks.
+        params:
+            episode: current episode (int)
+        return:
+            None
+        """
         self.low_con.save(episode)
         self.high_con.save(episode)
     
     def load(self, episode):
+        """
+        Load the agent's networks
+        params:
+            episode: episode number to load.
+        return:
+            None
+        """
         self.low_con.load(episode)
         self.high_con.load(episode)
 
@@ -480,7 +608,7 @@ class BaymaxAgent(HiroAgent):
 
     def train(self, global_step):
         """
-        Train the agent.
+        Train the agent's controllers.
         params:
             global_step: current time step (int)
         return:

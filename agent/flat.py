@@ -31,6 +31,9 @@ from util.utils import _is_update
 
 
 class FlatAgent(Agent):
+    """
+    Default flag Agent based on TD3.
+    """
     def __init__(
         self,
         state_dim,
@@ -95,6 +98,20 @@ class FlatAgent(Agent):
         self.start_timesteps = start_timesteps
     
     def step(self, s, env, step, global_step=0, explore=False):
+        """
+        Step the simulation.
+        params:
+            s: current state (torch.Tensor)
+            env: gym environment (gym.env)
+            step: current time step (int)
+            global_step: current time step (int) #TODO why is that?
+            explore: exploration boolean (bool)
+        return:
+            a: chosen action (torch.Tensor)
+            r: received reward (float)
+            n_s: next state (torch.Tensor)
+            done: done boolean (bool)
+        """
         if explore:
             if global_step < self.start_timesteps:
                 a = env.action_space.sample()
@@ -109,31 +126,93 @@ class FlatAgent(Agent):
         return a, r, n_s, done
     
     def append(self, step, s, a, n_s, r, d):
+        """
+        Append variables to the buffer.
+        params:
+            step: current time step (int)
+            s: current state (torch.Tensor)
+            a: current action (torch.Tensor)
+            n_s: next state (torch.Tensor)
+            r: reward (float)
+            d: done (bool)
+        return:
+            None
+        """
         self.replay_buffer.append(s, self.fg, a, n_s, r, d)
     
     def train(self, global_step):
+        """
+        Train the agent's controllers.
+        params:
+            global_step: current time step (int)
+        return:
+            losses: Dictionary of current losses (dict)
+            td_errors: Dictionary of current TD Errors (dict)
+        """
         if global_step >= self.start_timesteps:
             return self.con.train(self.replay_buffer)
     
     def _choose_action(self, s):
+        """
+        Choose action with controller.
+        params:
+            s: current state (torch.Tensor)
+        return:
+            a: action (torch.Tensor)
+        """
         return self.con.policy(s, self.fg)
     
     def _choose_action_with_noise(self, s):
+        """
+        Choose action with controller + noise.
+        params:
+            s: current state (torch.Tensor)
+        return:
+            a: action (torch.Tensor)
+        """
         return self.con.policy_with_noise(s, self.fg)
     
     def end_step(self):
-        # TODO: models should be saved after training steps, not episodes
+        """
+        End the current step.
+        params:
+            None
+        return:
+            None
+        """
         pass
     
     def end_episode(self, episode, logger=None):
+        """
+        End the current episode.
+        params:
+            episode: current episode (int)
+            logger:
+        return:
+            None
+        """
         if logger:
             if _is_update(episode, self.model_save_freq):
                 self.save(episode=episode)
     
     def save(self, episode):
+        """
+        Save the agent's networks.
+        params:
+            episode: current episode (int)
+        return:
+            None
+        """
         self.con.save(episode)
     
     def load(self, episode):
+        """
+        Load the agent's networks
+        params:
+            episode: episode number to load.
+        return:
+            None
+        """
         self.con.load(episode)
 
 # custom classes
