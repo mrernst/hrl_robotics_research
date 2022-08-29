@@ -29,13 +29,16 @@ from agent.base import Agent
 from algo.td3 import HighLevelController, LowLevelController, TD3Controller
 from util.replay_buffer import LowLevelReplayBuffer, HighLevelReplayBuffer, LowLevelPERReplayBuffer, HighLevelPERReplayBuffer, ReplayBuffer, PERReplayBuffer
 from algo.state_compression import StateCompressor, SliceCompressor, EncoderCompressor, AutoEncoderCompressor, EncoderNetwork, AutoEncoderNetwork, SimCLR_TT_Loss, cosine_sim
-from util.utils import Subgoal, _is_update
+from util.utils import Subgoal, AverageMeter, _is_update 
 
 
 # custom classes
 # -----
 
 class HiroAgent(Agent):
+    """
+    Efficient Hierarchical Reinforcement Learning Agent
+    """
     def __init__(
         self,
         state_dim,
@@ -298,35 +301,49 @@ class HiroAgent(Agent):
         # TODO: build this with the state_compressor
         # TODO: use an AverageMeter to keep track of the data
         # only write down statistics to the logs
-        desired = np.array(last_state[:sg.shape[0]]) + np.array(last_subgoal[:sg.shape[0]])
-        actual = np.array(state[:sg.shape[0]])
+        #desired = np.array(last_state[:sg.shape[0]]) + np.array(last_subgoal[:sg.shape[0]])
+        #actual = np.array(state[:sg.shape[0]])
+        desired = self.state_compressor.eval(last_state) + last_subgoal
+        actual = self.state_compressor.eval(state)
+        
         # get difference between where we want to go and what was actually reached
         # this tests the effectiveness of the LL agent
         
         # difference in euclidean space
-        self.low_con.curr_train_metrics['state_reached_diff'] = np.linalg.norm(actual - desired)
+        #self.low_con.curr_train_metrics['state_reached_diff'] = np.linalg.norm(actual - desired)
+        state_reached_diff = torch.linalg.norm(actual - desired)
         
         # get directional diff
-        followed_subgoal = np.array(state[:sg.shape[0]]) - np.array(last_state[:sg.shape[0]])
+        #followed_subgoal = np.array(state[:sg.shape[0]]) - np.array(last_state[:sg.shape[0]])
+        followed_subgoal = self.state_compressor.eval(state) - self.state_compressor.eval(last_state)
         
-        reshaped_last_subgoal = np.array(last_subgoal[:sg.shape[0]]).reshape(1, -1)
+        #reshaped_last_subgoal = np.array(last_subgoal[:sg.shape[0]]).reshape(1, -1)
+        #reshaped_followed_subgoal = followed_subgoal.reshape(1, -1)
+        
+        reshaped_last_subgoal = last_subgoal.reshape(1, -1)
         reshaped_followed_subgoal = followed_subgoal.reshape(1, -1)
-        self.low_con.curr_train_metrics['state_reached_direction_diff'] = torch.nn.CosineSimilarity(reshaped_followed_subgoal,
-            reshaped_last_subgoal)[0][0]
         
+        #self.low_con.curr_train_metrics['state_reached_direction_diff'] = torch.nn.CosineSimilarity(reshaped_followed_subgoal,
+        #    reshaped_last_subgoal)[0][0]
+        
+        state_reached_direction_diff = torch.nn.CosineSimilarity(reshaped_followed_subgoal, reshaped_last_subgoal)[0][0]
         # see difference in subgoals
+        
         if self.subgoal_position is None:
             self.subgoal_position = np.array(sg[:sg.shape[0]])
         else:
             self.prev_subgoal_position = self.subgoal_position
             self.subgoal_position = np.array(sg[:sg.shape[0]])
             # from the difference, compute magnitude and direction
-            self.low_con.curr_train_metrics['subgoals_mag_diff'] = np.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
+            #self.low_con.curr_train_metrics['subgoals_mag_diff'] = np.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
+            subgoal_mag_diff = torch.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
         
             reshaped_prev_subgoal_position = self.prev_subgoal_position.reshape(1, -1)
             reshaped_subgoal_position = self.subgoal_position.reshape(1, -1)
-            self.low_con.curr_train_metrics['subgoals_direction_diff'] = torch.nn.CosineSimilarity(reshaped_subgoal_position,
-                reshaped_prev_subgoal_position)[0][0]
+            #self.low_con.curr_train_metrics['subgoals_direction_diff'] = torch.nn.CosineSimilarity(reshaped_subgoal_position, reshaped_prev_subgoal_position)[0][0]
+            
+            subgoals_direction_diff = torch.nn.CosineSimilarity(reshaped_subgoal_position,
+            reshaped_prev_subgoal_position)[0][0]
     
     def _evaluate_high(self):
         """
@@ -383,9 +400,14 @@ class HiroAgent(Agent):
 
 
 class BaymaxAgent(HiroAgent):
+    """
+    BaymaxAgent is a HRL Agent that learns an internal goal space for the Subagent.
+    """
     def __init__(self, *args, **kwargs):
-        
-        # gather additional arguments
+        """
+        Initialize BaymaxAgent.
+        """
+        # gather BaymaxAgent arguments
         state_compr_type = kwargs.pop('type_sc')
         state_compr_batch_size = kwargs.pop('batch_size_sc')
         state_compr_lr = kwargs.pop('lr_sc')
@@ -394,8 +416,6 @@ class BaymaxAgent(HiroAgent):
 
         self.state_compr_time_horizon = kwargs.pop('time_horizon_sc')
         self.state_compr_train_freq = kwargs.pop('train_freq_sc')
-        
-        
         self.state_compr_type_is_enc = True if state_compr_type == 'enc' else False
         
         # initialize superclass
@@ -459,6 +479,14 @@ class BaymaxAgent(HiroAgent):
 
 
     def train(self, global_step):
+        """
+        Train the agent.
+        params:
+            global_step: current time step (int)
+        return:
+            losses: Dictionary of current losses (dict)
+            td_errors: Dictionary of current TD Errors (dict)
+        """
         losses = {}
         td_errors = {}
         
