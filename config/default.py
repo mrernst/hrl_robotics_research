@@ -18,8 +18,8 @@ import ml_collections
 def get_config():
 	"""
 	Get main parameters.
-	For each experiment, change these parameters manually for different
-	experiments.
+	For an experiment, change these parameters manually or use the
+	sys.args when executing the main.py
 	"""
 	cnf = ml_collections.ConfigDict(
 		{
@@ -123,11 +123,17 @@ def get_config():
 				},
 				# state compression configuration
 				'compressor': {
+					# Type of compressor "enc" or "autoenc"
 					'type': 'enc',
+					# Batch size of the learning algorithm
 					'batch_size': 256,
+					# Learning rate
 					'lr': 1e-4,
+					# SimCLR temperature parameter
 					'temp': 1,
+					# TimeAugmentation horizon
 					'time_horizon': 1,
+					# Train every train_freq time steps
 					'train_freq': 10,
 				},
 			},
