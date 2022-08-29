@@ -324,7 +324,8 @@ class TD3Controller(object):
         if episode<0:
             episode_list = map(int, os.listdir(self.model_path))
             episode = max(episode_list)
-            print(" " * 80 + "\r" + f'[INFO] Loaded model at episode {episode}')
+        
+        print(" " * 80 + "\r" + f'[INFO] Loaded model at episode {episode}')
 
 
         model_path = os.path.join(self.model_path, str(episode))
