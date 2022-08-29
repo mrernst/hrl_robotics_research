@@ -108,6 +108,16 @@ def random_sample(size=None, dtype=np.float64):
 
 
 def _is_update(episode, freq, ignore=0, rem=0):
+    """
+    Update function.
+    params:
+        episode: current episode (int)
+        freq: frequency of updates (int)
+        ignore: certain episode to ignore (int)
+        rem: remainder for episode%freq==rem
+    returns:
+        is_update: (bool)
+    """
         if episode!=ignore and episode%freq==rem:
             return True
         return False
