@@ -27,7 +27,7 @@ def main(_argv):
     JOBLIB_PARALLEL_JOBS = 2  # or os.cpu_count() to use all cores
     N_SEEDS = 1
     
-    launcher = Launcher(exp_name='002',
+    launcher = Launcher(exp_name='001',
                         python_file='main',
                         project_name='luna',
                         base_dir='./save/',
@@ -75,30 +75,30 @@ def main(_argv):
     #             'config.agent.subgoal_dim': 3,
     #         })
     # 
-    # agent_type = ['flat', 'hiro']
-    # for at in agent_type:
-    #     if LOCAL:
-    #         pass
-    #     else:
-    #         launcher.add_experiment(**{
-    #             'config.agent.agent_type': at,
-    #             'config.main.env_name': 'AntMaze-v1',
-    #             'config.main.max_timesteps': 5e6,
-    #             'config.agent.sub.prio_exp_replay': 1,
-    #             'config.agent.meta.prio_exp_replay': 1,
-    #             # 'config.agent.subgoal_dim': 3,
-    #         })
-    
-    compressor_type = ['enc', 'autoenc']
-    for ct in compressor_type:
+    agent_type = ['flat', 'hiro']
+    for at in agent_type:
         if LOCAL:
             pass
         else:
             launcher.add_experiment(**{
-                'config.agent.agent_type': 'baymax',
+                'config.agent.agent_type': at,
+                # 'config.main.env_name': 'AntMaze-v1',
                 'config.main.max_timesteps': 5e6,
-                'config.agent.compressor.type':ct,
+                # 'config.agent.sub.prio_exp_replay': 1,
+                # 'config.agent.meta.prio_exp_replay': 1,
+                # 'config.agent.subgoal_dim': 3,
             })
+    
+    # compressor_type = ['enc', 'autoenc']
+    # for ct in compressor_type:
+    #     if LOCAL:
+    #         pass
+    #     else:
+    #         launcher.add_experiment(**{
+    #             'config.agent.agent_type': 'baymax',
+    #             'config.main.max_timesteps': 5e6,
+    #             'config.agent.compressor.type':ct,
+    #         })
         
     # launcher.add_experiment(**{
     #     'config.agent.agent_type': 'hiro', 
