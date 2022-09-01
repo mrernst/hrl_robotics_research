@@ -229,7 +229,8 @@ class HiroAgent(Agent):
             else:
                 n_sg = self._choose_subgoal(step, s, self.sg, n_s)
             self.n_sg = n_sg
-    
+        
+        #self._evaluate_low(n_s, self.n_sg, s, self.sg)
         return a, r, n_s, done
     
     def append(self, step, s, a, n_s, r, d):
@@ -336,7 +337,7 @@ class HiroAgent(Agent):
         returns:
             sg: next subgoal
         """
-        if step % self.buffer_freq == 0: # Should be zero
+        if step % self.buffer_freq == 0:
             sg = self.high_con.policy_with_noise(s, self.fg)
         else:
             sg = self.subgoal_transition(s, sg, n_s)
@@ -372,7 +373,7 @@ class HiroAgent(Agent):
     
         return sg
     
-    def _evaluate_low(self, state, last_state, sg, last_subgoal):
+    def _evaluate_low(self, state, sg, last_state, last_subgoal):
         """
         Evaluate how the current low level agent
         is doing with following subgoals.
@@ -420,21 +421,19 @@ class HiroAgent(Agent):
         state_reached_direction_diff = torch.nn.CosineSimilarity(reshaped_followed_subgoal, reshaped_last_subgoal)[0][0]
         # see difference in subgoals
         
-        if self.subgoal_position is None:
-            self.subgoal_position = np.array(sg[:sg.shape[0]])
-        else:
-            self.prev_subgoal_position = self.subgoal_position
-            self.subgoal_position = np.array(sg[:sg.shape[0]])
-            # from the difference, compute magnitude and direction
-            #self.low_con.curr_train_metrics['subgoals_mag_diff'] = np.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
-            subgoal_mag_diff = torch.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
+
+        self.prev_subgoal_position = last_subgoal
+        self.subgoal_position = sg
+        # from the difference, compute magnitude and direction
+        #self.low_con.curr_train_metrics['subgoals_mag_diff'] = np.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
+        subgoal_mag_diff = torch.linalg.norm(self.subgoal_position - self.prev_subgoal_position)
+    
+        reshaped_prev_subgoal_position = self.prev_subgoal_position.reshape(1, -1)
+        reshaped_subgoal_position = self.subgoal_position.reshape(1, -1)
+        #self.low_con.curr_train_metrics['subgoals_direction_diff'] = torch.nn.CosineSimilarity(reshaped_subgoal_position, reshaped_prev_subgoal_position)[0][0]
         
-            reshaped_prev_subgoal_position = self.prev_subgoal_position.reshape(1, -1)
-            reshaped_subgoal_position = self.subgoal_position.reshape(1, -1)
-            #self.low_con.curr_train_metrics['subgoals_direction_diff'] = torch.nn.CosineSimilarity(reshaped_subgoal_position, reshaped_prev_subgoal_position)[0][0]
-            
-            subgoals_direction_diff = torch.nn.CosineSimilarity(reshaped_subgoal_position,
-            reshaped_prev_subgoal_position)[0][0]
+        subgoals_direction_diff = torch.nn.CosineSimilarity(reshaped_subgoal_position,
+        reshaped_prev_subgoal_position)[0][0]
         
         return state_reached_diff, state_reached_direction_diff, subgoals_mag_diff, subgoals_direction_diff
     
