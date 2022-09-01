@@ -118,10 +118,10 @@ def _is_update(episode, freq, ignore=0, rem=0):
     returns:
         is_update: (bool)
     """
-        if episode!=ignore and episode%freq==rem:
-            return True
-        return False
-    
+    if episode!=ignore and episode%freq==rem:
+        return True
+    return False
+
     
 def get_obs_array(state, combined=False):
     try:
@@ -156,6 +156,7 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+
 
 class GoalActionSpace(object):
     def __init__(self, dim, limits):
