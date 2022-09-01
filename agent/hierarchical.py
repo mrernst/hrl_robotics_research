@@ -378,15 +378,19 @@ class HiroAgent(Agent):
         is doing with following subgoals.
         params:
             state: current state (torch.Tensor)
-            last_state: the state before current state (torch.Tensor)
-            sg: current subgoal (torch.Tensor)
-            last_subgoal: the subgoal before sg (torch.Tensor)
+            last_state: the state some time steps before current state (torch.Tensor)
+            sg: current subgoal freshly sampled (torch.Tensor)
+            last_subgoal: the subgoal some time steps before sg (torch.Tensor)
         return:
             None
         """
-        raise NotImplementedError("Method is not yet implemented")
-        # TODO: build this with the state_compressor
-        # TODO: use an AverageMeter to keep track of the data
+        # state_reached_diff = AverageMeter()
+        # state_reached_direction_diff = AverageMeter()
+        # subgoals_mag_diff = AverageMeter()
+        # subgoals_direction_diff = AverageMeter()
+        
+        
+        # TODO: use an AverageMeter to keep track of the data in averages for logging
         # only write down statistics to the logs
         #desired = np.array(last_state[:sg.shape[0]]) + np.array(last_subgoal[:sg.shape[0]])
         #actual = np.array(state[:sg.shape[0]])
@@ -431,12 +435,18 @@ class HiroAgent(Agent):
             
             subgoals_direction_diff = torch.nn.CosineSimilarity(reshaped_subgoal_position,
             reshaped_prev_subgoal_position)[0][0]
+        
+        return state_reached_diff, state_reached_direction_diff, subgoals_mag_diff, subgoals_direction_diff
     
     def _evaluate_high(self):
         """
         Evaluate how the current high level agent
         is doing using a perfect low level controller.
+        (This has limited validity since it hasn't been trained
+        with a perfect subagent)
         """
+        # sample environment states that satisfy the
+        # sub-agent cost function
         raise NotImplementedError("Method is not yet implemented")
 
     def subgoal_transition(self, s, sg, n_s):
@@ -477,8 +487,7 @@ class HiroAgent(Agent):
             None
         return:
             None
-        """
-        # TODO: models should be saved after training steps, not episodes
+        """ 
         self.episode_subreward += self.sr
         self.sg = self.n_sg
     
@@ -576,9 +585,9 @@ class BaymaxAgent(HiroAgent):
         # even though it is not really a compressor
         self.controllers.append(self.state_compressor)
         
-        # modify the subgoal limits to be at -1, 1 to reflect the
+        # modify the subgoal limits to be at -0.25, 0.25 to reflect the
         # encoder properties
-        self.subgoal = Subgoal(kwargs['subgoal_dim'], limits = np.ones(kwargs['state_dim'], dtype=np.float32)*(-1))
+        self.subgoal = Subgoal(kwargs['subgoal_dim'], limits = np.ones(kwargs['state_dim'], dtype=np.float32)*(-0.25))
         self.sg = self.subgoal.action_space.sample()
 
     def save(self, episode):
