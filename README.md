@@ -1,17 +1,23 @@
-# RL Robotics Research Playground
+# HRL Robotics Research
+<p align="center">
+  <img src="https://github.com/mrernst/hrl_robotics_research/blob/main/img/HIRO_PER_t5M.gif" width="640">
+
 ### Project Name LUNA
 
-Machine learning playground using OpenAI Gym and Mujoco/PyBullet for robotic tasks.
+This is an active development and research repository for hierarchical reinforcement learning. It is a reimplementation of the HIRO agent (Nachum 2018) and builds on it in various domains, i.e. Prioritized Experience Replay and Subgoal compression.
+ 
+It is build in a way to incorporate OpenAI Gym environments and and Mujoco/PyBullet for robotic tasks.
 
 ### Flat agent
 TD3 Algorithm
 
 ### Hierarchical agent
-
+HIRO
+Baymax
 
 # Notes/ Acknowledgements
-Launcher is adapted from IAS TU Darmstadt -> https://gitlab.ias.informatik.tu-darmstadt.de/common/experiment_launcher
-
+The launcher script is adapted from IAS TU Darmstadt -> https://gitlab.ias.informatik.tu-darmstadt.de/common/experiment_launcher
+and simplyfies sending jobs to a slurm cluster.
 
 
 # Mujoco on Apple Silicon
