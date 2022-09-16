@@ -26,25 +26,28 @@ and simplyfies sending jobs to a slurm cluster.
 ## Mujoco on Apple Silicon
 
 ### Installation Guide
-mkdir -p $HOME/.mujoco/mujoco210
-ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/Headers/ $HOME/.mujoco/mujoco210/include
+1) Make directories for mujoco-py and link Mujoco of the App Bundle
+> mkdir -p $HOME/.mujoco/mujoco210
+> ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/Headers/ $HOME/.mujoco/mujoco210/include
 
-mkdir -p $HOME/.mujoco/mujoco210/bin
-ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/libmujoco.2.1.1.dylib $HOME/.mujoco/mujoco210/bin/libmujoco210.dylib
-sudo ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/libmujoco.2.1.1.dylib /usr/local/lib/
+2) Link library files
+> mkdir -p $HOME/.mujoco/mujoco210/bin
+> ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/libmujoco.2.1.1.dylib $HOME/.mujoco/mujoco210/bin/libmujoco210.dylib
+> sudo ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/libmujoco.2.1.1.dylib /usr/local/lib/
 
-### For M1 (arm64) mac users:
-brew install glfw
-ln -sf /opt/homebrew/lib/libglfw.3.dylib $HOME/.mujoco/mujoco210/bin
+3) Install needed graphics library via homebrew
+> brew install glfw
+> ln -sf /opt/homebrew/lib/libglfw.3.dylib $HOME/.mujoco/mujoco210/bin
 
-### remove old installation
-rm -rf /opt/homebrew/Caskroom/miniforge/base/lib/python3.9/site-packages/mujoco_py
+4) Remove old installation
+> rm -rf /opt/homebrew/Caskroom/miniforge/base/lib/python3.9/site-packages/mujoco_py
 
-which python
-exit
+> which python
+> exit
 
-export CC=/opt/homebrew/bin/gcc-12         # see https://github.com/openai/mujoco-py/issues/605
-pip install mujoco-py && python -c 'import mujoco_py'
+5) Add CC to your Bash/ZSH Variables
+> export CC=/opt/homebrew/bin/gcc-12         # see https://github.com/openai/mujoco-py/issues/605
+> pip install mujoco-py && python -c 'import mujoco_py'
 
 
 
