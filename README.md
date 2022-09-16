@@ -4,24 +4,28 @@
 
 ### Project Name LUNA
 
-This is an active development and research repository for hierarchical reinforcement learning. It is a reimplementation of the HIRO agent (Nachum 2018) and builds on it in various domains, i.e. Prioritized Experience Replay and Subgoal compression.
+This is an active development and research repository for hierarchical reinforcement learning. It contains a complete reimplementation of the HIRO agent ("Data-Efficient Hierarchical Reinforcement Learning" - Ofir Nachum et al., 2018) and builds on it in various domains, i.e. Prioritized Experience Replay and Subgoal compression.
  
 It is build in a way to incorporate OpenAI Gym environments and and Mujoco/PyBullet for robotic tasks.
 
 ### Flat agent
-TD3 Algorithm
+Standard TD3 Algorithm
 
 ### Hierarchical agent
 HIRO
-Baymax
+
+Baymax (Additional Subgoal Compression)
 
 # Notes/ Acknowledgements
 The launcher script is adapted from IAS TU Darmstadt -> https://gitlab.ias.informatik.tu-darmstadt.de/common/experiment_launcher
 and simplyfies sending jobs to a slurm cluster.
 
 
-# Mujoco on Apple Silicon
+# Running Mujoco as a Simulator for RL Tasks
 
+## Mujoco on Apple Silicon
+
+### Installation Guide
 mkdir -p $HOME/.mujoco/mujoco210
 ln -sf /Applications/MuJoCo.app/Contents/Frameworks/MuJoCo.framework/Versions/Current/Headers/ $HOME/.mujoco/mujoco210/include
 
@@ -44,8 +48,9 @@ pip install mujoco-py && python -c 'import mujoco_py'
 
 
 
-# Mujoco on FIAS Cluster
+## Mujoco on the FIAS Cluster
 
+### Installation Guide
 1) Setup a miniconda environment with python 3.9.X and install pytorch, gym, dependencies you need for development
 > conda install numpy
 > conda install pytorch
